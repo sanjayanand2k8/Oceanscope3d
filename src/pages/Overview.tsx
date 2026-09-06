@@ -61,35 +61,36 @@ export default function Overview() {
   return (
     <div className="space-y-6 lg:space-y-8">
       {/* ------------------------------- Hero ------------------------------- */}
-      <section aria-label="Introduction" className="relative overflow-hidden rounded-xl bg-navy-900 text-white shadow-lg shadow-navy-900/20">
+      <section aria-label="Introduction" className="relative isolate overflow-hidden rounded-xl bg-navy-900 text-white shadow-lg shadow-navy-900/20">
         <HeroArt />
-        <div className="relative z-10 max-w-2xl px-6 py-10 sm:px-10 sm:py-14 lg:px-14 lg:py-[70px]">
-          <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-teal-300">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-navy-900/55 via-navy-900/25 to-navy-900/60 sm:hidden" aria-hidden />
+        <div className="relative z-10 max-w-2xl px-5 py-8 sm:px-10 sm:py-14 lg:px-14 lg:py-[70px]">
+          <p className="mb-3 inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase leading-relaxed tracking-[0.1em] text-teal-300 sm:text-[11px] sm:tracking-[0.14em]">
             <span className="h-1.5 w-1.5 rounded-full bg-teal-400" aria-hidden />
             SIH26067 · Ministry of Earth Sciences
           </p>
-          <h1 className="font-display text-[40px] font-semibold leading-[1.05] tracking-tight sm:text-[52px]">
+          <h1 className="font-display text-[clamp(2.15rem,10vw,3.25rem)] font-semibold leading-[1.02] tracking-tight sm:text-[52px]">
             OceanScope <span className="text-teal-300">3D</span>
           </h1>
-          <p className="mt-2 text-[15px] font-medium text-slate-300">
+          <p className="mt-2 text-[14px] font-medium leading-relaxed text-slate-300 sm:text-[15px]">
             Visualizing, validating, and understanding India's ocean data.
           </p>
-          <p className="mt-5 max-w-xl text-[14px] leading-relaxed text-slate-300/95">
+          <p className="mt-5 max-w-xl text-[13px] leading-[1.75] text-slate-300/95 sm:text-[14px] sm:leading-relaxed">
             Interactive visualization and validation of numerical ocean model outputs using in-situ observations. OceanScope 3D
             combines model predictions with measurements from buoys, Argo floats, ships and moored instruments to make ocean
             conditions easier to explore, compare and trust.
           </p>
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <a
               href="#/explorer"
-              className="inline-flex items-center gap-2 rounded-lg bg-teal-500 px-5 py-3 text-[14px] font-semibold text-navy-950 transition-colors hover:bg-teal-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-500 px-4 py-3 text-[14px] font-semibold text-navy-950 sm:w-auto sm:px-5 transition-colors hover:bg-teal-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900"
             >
               <Compass className="h-4 w-4" strokeWidth={2.2} aria-hidden />
               Explore Ocean Data
             </a>
             <a
               href="#/methodology"
-              className="inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/5 px-5 py-3 text-[14px] font-semibold text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/25 bg-white/5 px-4 py-3 text-[14px] font-semibold text-white sm:w-auto sm:px-5 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900"
             >
               View Methodology
               <ArrowRight className="h-4 w-4" aria-hidden />
@@ -244,7 +245,7 @@ function HeroArt() {
       </g>
 
       {/* contour labels */}
-      <g fontFamily="Inter, system-ui, sans-serif" fontSize="10.5" fontWeight="600" letterSpacing="0.05em">
+      <g className="hidden sm:block" fontFamily="Inter, system-ui, sans-serif" fontSize="10.5" fontWeight="600" letterSpacing="0.05em">
         <text x="777" y="232" fill="#5EEAD4">30.2°C</text>
         <text x="838" y="255" fill="#2DD4BF" fillOpacity="0.8">29.5°C</text>
         <text x="892" y="286" fill="#14B8A6" fillOpacity="0.55">28.8°C</text>
@@ -290,7 +291,7 @@ function HeroArt() {
       </g>
 
       {/* callsign chips */}
-      <g fontFamily="Inter, system-ui, sans-serif" fontSize="10" fontWeight="600">
+      <g className="hidden sm:block" fontFamily="Inter, system-ui, sans-serif" fontSize="10" fontWeight="600">
         <g transform="translate(596 178)">
           <rect width="86" height="20" rx="4" fill="rgba(10,37,64,0.85)" stroke="rgba(94,234,212,0.35)" />
           <text x="10" y="13.5" fill="#99F6E4">ARGO-IN-1024</text>
