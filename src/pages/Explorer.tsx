@@ -1,4 +1,12 @@
+/* ------------------------------------------------------------------ */
 /* Ocean Explorer — map-centric exploration of model and observations. */
+/*                                                                     */
+/* All data on this page arrives through the typed API client          */
+/* (src/services/api.ts): model grid layer, observation markers,       */
+/* comparison snapshots, time series and depth profiles.  When the     */
+/* FastAPI backend is unreachable the client transparently serves the  */
+/* identical embedded fallback — the page code does not change.        */
+/* ------------------------------------------------------------------ */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -15,9 +23,19 @@ import {
   Cell,
 } from "recharts";
 import { Activity, Anchor, Diff, Pin, Thermometer, Waves, X } from "lucide-react";
-import type { SeriesPoint, Station, StationSnapshot } from "../types";
-import { STATUS_META, depthAgreement as depthAggFn, regionByKey, shortDate, stationById, stationSeries, stationsInRegion, variableByKey } from "../data/ocean";
-import { getObservations, getStationSnapshot } from "../services/api";
+import type { SeriesPoint, Station } from "../types";
+import { STATUS_META, regionByKey, shortDate, stationById, stationsInRegion, variableByKey } from "../data/ocean";
+import {
+  getDepthProfileRows,
+  getGridLayer,
+  getMapMarkers,
+  getRegionalMeanSeries,
+  getStationDiffs,
+  getStationSeries,
+  getStationSnapshot,
+  type SnapshotResult,
+} from "../services/api";
+import { useAsyncData } from "../hooks/useAsyncData";
 import OceanMap from "../components/OceanMap";
 import ObservationDetailPanel from "../components/ObservationDetailPanel";
 import FilterBar, { DEFAULT_FILTERS, PageFilters } from "../components/FilterBar";
@@ -34,10 +52,6 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
   const [filters, setFilters] = useState<PageFilters>(() => ({ ...DEFAULT_FILTERS, source: "compare", region: settings.defaultRegion }));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
-  const [snapshot, setSnapshot] = useState<StationSnapshot | null>(null);
-  const [snapshotLoading, setSnapshotLoading] = useState(false);
-  const [series, setSeries] = useState<SeriesPoint[] | null>(null);
-  const [seriesLoading, setSeriesLoading] = useState(true);
   const chartsRef = useRef<HTMLDivElement>(null);
 
   const spec = useMemo(
@@ -45,100 +59,112 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
     [filters.region, filters.variable, filters.depth, filters.fromDay, filters.toDay]
   );
 
-  /* Sync station selection with region change */
-  useEffect(() => {
-    if (selectedId && !stationsInRegion(filters.region).some((s) => s.id === selectedId)) {
-      setSelectedId(null);
-    }
-  }, [filters.region, selectedId]);
-
-  /* Regional mean series via the services layer (loading state exercised) */
-  useEffect(() => {
-    let active = true;
-    setSeriesLoading(true);
-    getObservations(spec).then((d) => {
-      if (active) {
-        setSeries(d);
-        setSeriesLoading(false);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [spec]);
-
-  /* Station snapshot for the side panel */
-  useEffect(() => {
-    if (!selectedId) {
-      setSnapshot(null);
-      return;
-    }
-    let active = true;
-    setSnapshotLoading(true);
-    getStationSnapshot(selectedId, filters.variable, filters.depth, filters.day).then((d) => {
-      if (active) {
-        setSnapshot(d);
-        setSnapshotLoading(false);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [selectedId, filters.variable, filters.depth, filters.day]);
-
-  const selectedStation = selectedId ? stationById(selectedId) ?? null : null;
   const def = variableByKey(filters.variable);
+  const selectedStation = selectedId ? stationById(selectedId) ?? null : null;
   const regionStations = stationsInRegion(filters.region);
   const pinnedStations = pinnedIds.map((id) => stationById(id)).filter((s): s is Station => !!s);
 
-  /* chart payload: station series when selected, else regional mean */
+  /** Deepest sampled level when a platform cannot reach the selected depth. */
+  const effDepth = (s: Station) => (s.depths.includes(filters.depth) ? filters.depth : s.depths[s.depths.length - 1]);
+
+  /* --------------------------- data loading --------------------------- */
+
+  /* model field layer for the map (getOceanData) */
+  const gridLayer = useAsyncData(
+    () => getGridLayer({ variable: filters.variable, depth: filters.depth, day: filters.day }),
+    [filters.variable, filters.depth, filters.day]
+  );
+
+  /* observation + comparison markers (getObservations + getComparisonData) */
+  const markers = useAsyncData(
+    () => getMapMarkers({ variable: filters.variable, depth: filters.depth, day: filters.day }),
+    [filters.variable, filters.depth, filters.day]
+  );
+
+  /* regional mean time series (getTimeSeries) */
+  const regional = useAsyncData(() => getRegionalMeanSeries(spec), [spec]);
+
+  /* selected + pinned station series (getTimeSeries with station_id) */
+  const pinnedKey = pinnedStations.map((s) => s.id).join(",");
+  const stationSeriesMap = useAsyncData(async () => {
+    const targets = [...new Map([...pinnedStations, ...(selectedStation ? [selectedStation] : [])].map((s) => [s.id, s])).values()];
+    if (!targets.length) return null;
+    const out: Record<string, SeriesPoint[]> = {};
+    await Promise.all(
+      targets.map(async (s) => {
+        out[s.id] = await getStationSeries(s.id, filters.variable, effDepth(s), filters.fromDay, filters.toDay);
+      })
+    );
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinnedKey, selectedId, filters.variable, filters.depth, filters.fromDay, filters.toDay]);
+
+  /* vertical profile (getDepthProfile) */
+  const depthRows = useAsyncData(
+    () =>
+      getDepthProfileRows({
+        variable: filters.variable,
+        day: filters.day,
+        stationId: selectedId,
+        region: selectedId ? null : filters.region,
+      }),
+    [filters.variable, filters.day, filters.region, selectedId]
+  );
+
+  /* mean station differences over the period (getComparisonData) */
+  const diffRows = useAsyncData(() => getStationDiffs(spec), [spec]);
+
+  /* selected station snapshot (getComparisonData, station-scoped) */
+  const snapshotResult = useAsyncData<SnapshotResult>(
+    () =>
+      selectedId
+        ? getStationSnapshot(selectedId, filters.variable, filters.depth, filters.day)
+        : Promise.resolve({ snapshot: null, noDataReason: null }),
+    [selectedId, filters.variable, filters.depth, filters.day]
+  );
+
+  /* Every station marker — in or outside the active region — opens its own
+     panel. On small screens (panel below the map), scroll it into view. */
+  useEffect(() => {
+    if (selectedId && window.matchMedia("(max-width: 1279px)").matches) {
+      scrollToId("station-detail-panel");
+    }
+  }, [selectedId]);
+
+  /* ------------------------- derived chart data ----------------------- */
+
   const timeData = useMemo(() => {
-    const base = selectedStation
-      ? stationSeries(selectedStation, filters.variable, filters.depth, filters.fromDay, filters.toDay)
-      : series ?? [];
+    if (selectedStation) {
+      const base = stationSeriesMap.data?.[selectedStation.id] ?? [];
+      if (!pinnedStations.length) return base;
+      return base.map((pt) => {
+        const extra: Record<string, number> = {};
+        pinnedStations.forEach((s, i) => {
+          const row = stationSeriesMap.data?.[s.id]?.find((r) => r.day === pt.day);
+          if (row) extra[`pin${i}`] = row.observed;
+        });
+        return { ...pt, ...extra };
+      });
+    }
+    const base = regional.data ?? [];
     if (!pinnedStations.length) return base;
     return base.map((pt) => {
       const extra: Record<string, number> = {};
       pinnedStations.forEach((s, i) => {
-        const row = stationSeries(s, filters.variable, filters.depth, pt.day, pt.day)[0];
+        const row = stationSeriesMap.data?.[s.id]?.find((r) => r.day === pt.day);
         if (row) extra[`pin${i}`] = row.observed;
       });
       return { ...pt, ...extra };
     });
-  }, [selectedStation, series, pinnedStations, filters.variable, filters.depth, filters.fromDay, filters.toDay]);
+  }, [selectedStation, regional.data, stationSeriesMap.data, pinnedStations]);
 
-  /* depth profile at focus day */
-  const depthData = useMemo(() => {
-    if (selectedStation) {
-      return selectedStation.depths.map((d) => {
-        const row = stationSeries(selectedStation, filters.variable, d, filters.day, filters.day)[0];
-        return { depth: d, model: row?.model ?? null, observed: row?.observed ?? null };
-      });
-    }
-    return depthAggFn(spec).map((d) => {
-      const daySpec = { ...spec, depth: d.depth as typeof spec.depth, fromDay: filters.day, toDay: filters.day };
-      const rows = stationsInRegion(spec.region).filter((s) => s.depths.includes(d.depth as 0));
-      let m = 0, o = 0;
-      rows.forEach((s) => {
-        const r = stationSeries(s, spec.variable, daySpec.depth, filters.day, filters.day)[0];
-        m += r?.model ?? 0;
-        o += r?.observed ?? 0;
-      });
-      const n = rows.length || 1;
-      return { depth: d.depth, model: +(m / n).toFixed(3), observed: +(o / n).toFixed(3) };
-    });
-  }, [selectedStation, spec, filters.variable, filters.day]);
+  const depthData = depthRows.data ?? [];
+  const diffData = diffRows.data ?? [];
+  const highlightDepth = selectedStation ? effDepth(selectedStation) : filters.depth;
 
-  /* station differences at focus day */
-  const diffData = useMemo(
-    () =>
-      regionStations.map((s) => {
-        const d = s.depths.includes(filters.depth) ? filters.depth : s.depths[s.depths.length - 1];
-        const row = stationSeries(s, filters.variable, d, filters.day, filters.day)[0];
-        return { id: s.id.replace(/^(ARGO|BUOY|SHIP|RAMA)-/, ""), full: s.id, diff: row?.diff ?? 0, status: row ? (Math.abs(row.diff) < def.goodBelow ? "good" : Math.abs(row.diff) < def.moderateBelow ? "moderate" : "high") : "good" };
-      }),
-    [regionStations, filters.variable, filters.depth, filters.day, def]
-  );
+  const timeLoading = selectedStation ? stationSeriesMap.loading : regional.loading;
+
+  /* ------------------------------ actions ------------------------------ */
 
   const selectStation = (s: Station | null) => setSelectedId(s ? s.id : null);
 
@@ -153,6 +179,9 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
     setSelectedId(null);
     setPinnedIds([]);
   };
+
+  const snapshot = snapshotResult.data?.snapshot ?? null;
+  const snapshotError = snapshotResult.data?.noDataReason ?? snapshotResult.error;
 
   return (
     <div className="space-y-4">
@@ -181,12 +210,17 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
             selectedId={selectedId}
             onSelect={selectStation}
             reducedMotion={settings.reducedMotion}
+            gridCells={gridLayer.data?.cells ?? []}
+            arrows={gridLayer.data?.arrows ?? []}
+            markerValues={markers.data ?? {}}
+            layerLoading={gridLayer.loading && !gridLayer.data}
           />
         </div>
-        <div className="xl:h-[560px]">
+        <div id="station-detail-panel" className="scroll-mt-20 xl:h-[560px]">
           <ObservationDetailPanel
             snapshot={snapshot}
-            loading={snapshotLoading}
+            loading={snapshotResult.loading}
+            snapshotError={snapshotError}
             onClose={() => setSelectedId(null)}
             onViewComparison={viewComparison}
             isPinned={selectedId ? pinnedIds.includes(selectedId) : false}
@@ -219,14 +253,16 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
         <ChartCard
           icon={Activity}
           title="Model vs Observation Over Time"
-          subtitle={`${selectedStation ? `${selectedStation.id} · ${selectedStation.platform}` : `Regional mean · ${regionByKey(filters.region).label}`} · ${def.label} at ${filters.depth === 0 ? "the surface" : filters.depth + " m"}`}
-          tooltip="Daily comparison for January 2026. The model line is the simulated value; the observed line is what instruments actually measured. Pinned stations appear as extra observed lines."
+          subtitle={`${selectedStation ? `${selectedStation.id} · ${selectedStation.platform}` : `Regional mean · ${regionByKey(filters.region).label}`} · ${def.label} at ${
+            selectedStation ? (effDepth(selectedStation) === 0 ? "the surface" : effDepth(selectedStation) + " m") : filters.depth === 0 ? "the surface" : filters.depth + " m"
+          }${selectedStation && effDepth(selectedStation) !== filters.depth ? " (deepest available)" : ""}`}
+          tooltip="Matched observation days within the selected period. The model line is the simulated value; the observed line is what instruments actually measured. Pinned stations appear as extra observed lines."
           className="xl:col-span-7"
           actions={
             <LegendChip model="Model" observed="Observed" />
           }
         >
-          {seriesLoading ? (
+          {timeLoading ? (
             <ChartSkeleton />
           ) : timeData.length === 0 ? (
             <EmptyState compact icon={Waves} title="No data available for current filters" body="Try a wider date range or a different depth level." />
@@ -237,10 +273,10 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#E2E8F0" }} interval={Math.ceil(timeData.length / 8)} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} tickLine={false} axisLine={false} domain={["auto", "auto"]} tickFormatter={(v: number) => v.toFixed(1)} />
                 <Tooltip content={<ExplorerTip unit={def.unit} decimals={def.decimals} />} />
-                <Line type="monotone" dataKey="model" name={selectedStation ? "Model" : "Model (mean)"} stroke="#2563EB" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="observed" name={selectedStation ? "Observed" : "Observed (mean)"} stroke="#0D9488" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="model" name={selectedStation ? "Model" : "Model (mean)"} stroke="#2563EB" strokeWidth={2} dot={timeData.length <= 2 ? { r: 3.5, fill: "#2563EB" } : false} />
+                <Line type="monotone" dataKey="observed" name={selectedStation ? "Observed" : "Observed (mean)"} stroke="#0D9488" strokeWidth={2} dot={timeData.length <= 2 ? { r: 3.5, fill: "#0D9488" } : false} />
                 {pinnedStations.map((s, i) => (
-                  <Line key={s.id} type="monotone" dataKey={`pin${i}`} name={s.id} stroke={PIN_COLORS[i % PIN_COLORS.length]} strokeWidth={1.4} strokeDasharray="5 3" dot={false} />
+                  <Line key={s.id} type="monotone" dataKey={`pin${i}`} name={s.id} stroke={PIN_COLORS[i % PIN_COLORS.length]} strokeWidth={1.4} strokeDasharray="5 3" dot={timeData.length <= 2 ? { r: 3, fill: PIN_COLORS[i % PIN_COLORS.length] } : false} />
                 ))}
               </LineChart>
             </ResponsiveContainer>
@@ -251,10 +287,10 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
           icon={Thermometer}
           title="Value by Depth"
           subtitle={`${selectedStation ? selectedStation.id : regionByKey(filters.region).label + " mean"} · ${shortDate(filters.day)} 2026`}
-          tooltip="Vertical profile — how the value changes from the surface to 200 m. The ocean is strongly layered; agreement often weakens below the thermocline."
+          tooltip="Vertical profile — how the value changes from the surface to 200 m at the nearest observation day. Levels a platform cannot sample are omitted."
           className="xl:col-span-5"
         >
-          {seriesLoading ? (
+          {depthRows.loading ? (
             <ChartSkeleton />
           ) : (
             <ResponsiveContainer width="100%" height={250}>
@@ -263,8 +299,23 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
                 <XAxis type="number" tick={{ fontSize: 10, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#E2E8F0" }} domain={["auto", "auto"]} tickFormatter={(v: number) => v.toFixed(1)} />
                 <YAxis type="number" dataKey="depth" reversed domain={[0, 200]} ticks={[0, 50, 100, 200]} tick={{ fontSize: 10, fill: "#64748B" }} tickLine={false} axisLine={false} width={34} tickFormatter={(v: number) => `${v} m`} />
                 <Tooltip content={<DepthTip unit={def.unit} decimals={def.decimals} />} />
-                <Line dataKey="model" name="Model" stroke="#2563EB" strokeWidth={2} dot={{ r: 3, fill: "#2563EB" }} />
-                <Line dataKey="observed" name="Observed" stroke="#0D9488" strokeWidth={2} dot={{ r: 3, fill: "#0D9488" }} />
+                {depthData.some((r) => r.depth === highlightDepth) && (
+                  <ReferenceLine
+                    y={highlightDepth}
+                    stroke="#0D9488"
+                    strokeDasharray="6 4"
+                    strokeWidth={1.6}
+                    label={{
+                      value: highlightDepth === 0 ? "selected: surface" : `selected: ${highlightDepth} m`,
+                      position: "insideTopRight",
+                      fontSize: 10,
+                      fill: "#0D9488",
+                      fontWeight: 700,
+                    }}
+                  />
+                )}
+                <Line dataKey="model" name="Model" stroke="#2563EB" strokeWidth={2} dot={{ r: 3, fill: "#2563EB" }} connectNulls />
+                <Line dataKey="observed" name="Observed" stroke="#0D9488" strokeWidth={2} dot={{ r: 3, fill: "#0D9488" }} connectNulls />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -272,13 +323,15 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
 
         <ChartCard
           icon={Diff}
-          title="Station Differences at Focus Day"
-          subtitle={`Model − observed · ${shortDate(filters.day)} 2026 · ${filters.depth === 0 ? "surface" : filters.depth + " m"} · bars coloured by agreement`}
-          tooltip="Each bar is one station. Bars near zero mean the model matches the instrument. Green = good agreement, amber = moderate, red = high deviation."
+          title="Mean Station Difference — Selected Period"
+          subtitle={`Model − observed, averaged ${shortDate(filters.fromDay)} – ${shortDate(filters.toDay)} 2026 · ${filters.depth === 0 ? "surface" : filters.depth + " m"} · bars coloured by agreement`}
+          tooltip="Each bar is one station, averaged over matched records in the selected date range. Bars near zero mean the model matches the instrument. Green = good agreement, amber = moderate, red = high deviation."
           className="xl:col-span-12"
         >
-          {seriesLoading ? (
+          {diffRows.loading ? (
             <ChartSkeleton height={170} />
+          ) : diffData.length === 0 ? (
+            <EmptyState compact icon={Waves} title="No data available for current filters" body="This region has no stations reporting at the chosen depth." />
           ) : (
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={diffData} margin={{ top: 8, right: 12, bottom: 0, left: -14 }} barCategoryGap="24%">
@@ -289,7 +342,7 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
                 <ReferenceLine y={0} stroke="#94A3B8" />
                 <Bar dataKey="diff" name={`Difference (${def.unit})`} radius={[3, 3, 0, 0]} maxBarSize={52}>
                   {diffData.map((d) => (
-                    <Cell key={d.full} fill={STATUS_META[d.status as keyof typeof STATUS_META].color} />
+                    <Cell key={d.full} fill={STATUS_META[d.status].color} />
                   ))}
                 </Bar>
               </BarChart>
@@ -299,15 +352,15 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
             {(["good", "moderate", "high"] as const).map((k) => (
               <StatusBadge key={k} level={k} size="sm" />
             ))}
-            <span className="ml-auto text-[11px] text-slate-400">Thresholds: good &lt; {def.goodBelow} {def.unit}, moderate &lt; {def.moderateBelow} {def.unit}</span>
+            <span className="ml-auto text-[11px] text-slate-400">Thresholds: good ≤ {def.goodBelow} {def.unit}, moderate ≤ {def.moderateBelow} {def.unit}</span>
           </div>
         </ChartCard>
       </div>
 
       <p className="flex items-start gap-2 text-[11.5px] leading-relaxed text-slate-400">
         <Anchor className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-        Demonstration data: all readings on this page are generated from a synthetic field model tuned to realistic January
-        conditions in the North Indian Ocean. Dates span 01–30 January 2026.
+        Curated sample data: readings on this page come from the local sample dataset
+        (deterministic, tuned to realistic January conditions in the North Indian Ocean). Dates span 01–30 January 2026.
       </p>
     </div>
   );
@@ -375,7 +428,7 @@ function DiffTip({ active, payload, label, unit, decimals }: TipProps & { unit: 
   return (
     <TipFrame active label={row?.full ?? label}>
       <p className="text-[11.5px] tabular-nums text-slate-700">
-        Difference: <span className="font-semibold">{Number(payload[0].value).toFixed(decimals)} {unit}</span>
+        Mean difference: <span className="font-semibold">{Number(payload[0].value).toFixed(decimals)} {unit}</span>
       </p>
       {row?.status && (
         <p className="mt-0.5 text-[11px] font-semibold" style={{ color: STATUS_META[row.status as keyof typeof STATUS_META].color }}>

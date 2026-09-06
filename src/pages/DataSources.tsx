@@ -34,9 +34,9 @@ export default function DataSources() {
         title="Data Sources"
         subtitle="Understand the origin, reliability, and status of the datasets used in this analysis."
         actions={
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11.5px] font-semibold text-slate-600">
-            <BookMarked className="h-3.5 w-3.5 text-teal-600" aria-hidden />
-            4 registered datasets · sample mode
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11.5px] font-semibold text-amber-800">
+            <BookMarked className="h-3.5 w-3.5 text-amber-600" aria-hidden />
+            Curated sample data · 4 registered datasets
           </span>
         }
       />

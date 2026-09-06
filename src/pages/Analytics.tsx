@@ -1,6 +1,6 @@
 /* Ocean Analytics — trends, anomalies, vertical structure, currents. */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Area,
   CartesianGrid,
@@ -12,15 +12,16 @@ import {
   YAxis,
 } from "recharts";
 import { AlertTriangle, ArrowUpDown, Flame, Lightbulb, Navigation, OctagonAlert, Route, Thermometer, TriangleAlert, Waves, Wind } from "lucide-react";
-import type { Anomaly, MonthlyMean, SeriesPoint, VariableKey } from "../types";
+import type { Anomaly, MonthlyMean, VariableKey } from "../types";
 import { ANOMALIES, TRANSECT, currentRose, seasonalSeries, transectCells } from "../data/content";
-import { depthAgreement, regionByKey, stationsInRegion, stationSeries, valueColor, variableByKey } from "../data/ocean";
-import { getObservations } from "../services/api";
+import { regionByKey, valueColor, variableByKey } from "../data/ocean";
+import { getAnalyticsInputs, getMonthlyDepthComparison } from "../services/api";
+import { useAsyncData } from "../hooks/useAsyncData";
 import FilterBar, { DEFAULT_FILTERS, PageFilters } from "../components/FilterBar";
 import MetricCard from "../components/MetricCard";
 import ChartCard from "../components/ChartCard";
 import EmptyState from "../components/EmptyState";
-import { CardSkeleton, PageHeader } from "../components/ui";
+import { CardSkeleton, ChartSkeleton, PageHeader } from "../components/ui";
 import { cls } from "../lib/utils";
 import type { AppSettings } from "../App";
 
@@ -32,8 +33,6 @@ const PRIORITY_STYLE: Record<Anomaly["priority"], { label: string; cls: string; 
 
 export default function Analytics({ settings }: { settings: AppSettings }) {
   const [filters, setFilters] = useState<PageFilters>(() => ({ ...DEFAULT_FILTERS, region: settings.defaultRegion }));
-  const [surfaceSeries, setSurfaceSeries] = useState<SeriesPoint[] | null>(null);
-  const [loading, setLoading] = useState(true);
 
   const variable = filters.variable;
   const def = variableByKey(variable);
@@ -42,84 +41,41 @@ export default function Analytics({ settings }: { settings: AppSettings }) {
     [filters.region, filters.variable, filters.depth]
   );
 
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    getObservations({ ...spec, variable: "temperature", depth: 0 }).then((d) => {
-      if (active) {
-        setSurfaceSeries(d);
-        setLoading(false);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [spec]);
+  /* trend cards + insights arrive through the typed API client */
+  const inputs = useAsyncData(() => getAnalyticsInputs(spec), [spec]);
 
-  /* trend cards */
-  const trends = useMemo(() => {
-    const stations = stationsInRegion(filters.region);
-    const monthMean = (v: VariableKey) => {
-      let sum = 0, n = 0;
-      stations.forEach((s) => {
-        stationSeries(s, v, 0, 1, 30).forEach((p) => {
-          sum += p.observed;
-          n++;
-        });
-      });
-      return n ? sum / n : 0;
-    };
-    let worst = { stationId: "—", value: 0 };
-    stations.forEach((s) => {
-      stationSeries(s, spec.variable, spec.depth, 1, 30).forEach((p) => {
-        if (Math.abs(p.diff) > Math.abs(worst.value)) worst = { stationId: s.id, value: p.diff };
-      });
-    });
-    return { temperature: monthMean("temperature"), salinity: monthMean("salinity"), current: monthMean("current"), worst };
-  }, [filters.region, spec]);
+  /* monthly depth-profile comparison via getTimeSeries per level */
+  const depthProfile = useAsyncData(() => getMonthlyDepthComparison(variable, filters.region), [variable, filters.region]);
+
+  const loading = inputs.loading;
+
+  const trends = useMemo(
+    () => ({
+      temperature: inputs.data?.means.temperature ?? 0,
+      salinity: inputs.data?.means.salinity ?? 0,
+      current: inputs.data?.means.current ?? 0,
+      worst: inputs.data?.worst ?? { stationId: "—", value: 0 },
+    }),
+    [inputs.data]
+  );
+  const surfaceDelta = inputs.data?.surfaceDelta ?? null;
 
   const seasonal = useMemo<MonthlyMean[]>(() => seasonalSeries(filters.region, variable), [filters.region, variable]);
 
   const crossSection = useMemo(() => transectCells(variable, 15), [variable]);
 
-  const depthComparison = useMemo(() => {
-    return depthAgreement({ region: filters.region, variable, depth: 0, fromDay: 1, toDay: 30 }).map((d) => {
-      const stations = stationsInRegion(filters.region).filter((s) => s.depths.includes(d.depth as 0));
-      let m = 0, o = 0, n = 0;
-      stations.forEach((s) => {
-        stationSeries(s, variable, d.depth as 0, 1, 30).forEach((p) => {
-          m += p.model;
-          o += p.observed;
-          n++;
-        });
-      });
-      return { depth: d.depth, model: n ? +(m / n).toFixed(3) : null, observed: n ? +(o / n).toFixed(3) : null };
-    });
-  }, [filters.region, variable]);
+  const depthComparison = depthProfile.data ?? [];
 
   const rose = useMemo(() => currentRose(filters.region), [filters.region]);
 
-  const insights = useMemo(() => {
-    const out: string[] = [];
-    const warmest = seasonal.reduce((a, b) => (a.value >= b.value ? a : b));
-    const coolest = seasonal.reduce((a, b) => (a.value <= b.value ? a : b));
-    out.push(
-      `${def.short} in the ${regionByKey(filters.region).label} peaks around ${warmest.month} (${warmest.value.toFixed(2)} ${def.unit}) and is lowest in ${coolest.month} — a seasonal swing of ${(warmest.value - coolest.value).toFixed(1)} ${def.unit} against the climatology.`
-    );
-    const dominant = rose.reduce((a, b) => (a.frequency >= b.frequency ? a : b));
-    out.push(
-      `Currents in the selected region flow most often toward the ${dominant.sector} sector (≈ ${dominant.speed} m/s typical), consistent with the winter monsoon circulation.`
-    );
-    const deep = depthAgreement({ region: filters.region, variable, depth: 200, fromDay: 1, toDay: 30 });
-    const surf = deep.filter((d) => d.depth === 0)[0];
-    const deepRow = deep.filter((d) => d.depth === 200)[0];
-    if (surf && deepRow) {
-      out.push(
-        `Model agreement weakens with depth: MAE rises from ${surf.mae.toFixed(2)} ${def.unit} at the surface to ${deepRow.mae.toFixed(2)} ${def.unit} at 200 m, pointing to the thermocline as the main modelling challenge.`
-      );
-    }
-    return out;
-  }, [seasonal, rose, filters.region, variable, def]);
+  /* Rule-based insight cards — from the getInsights endpoint (no AI). */
+  const insights = useMemo(
+    () =>
+      (inputs.data?.insights ?? []).map((i) =>
+        i.supporting_metric ? `${i.message} (${i.supporting_metric})` : i.message
+      ),
+    [inputs.data]
+  );
 
   const insightsTitle = `Insights · ${regionByKey(filters.region).label}`;
 
@@ -155,8 +111,8 @@ export default function Analytics({ settings }: { settings: AppSettings }) {
               unit="°C"
               tone="ocean"
               sub={
-                surfaceSeries && surfaceSeries.length > 1
-                  ? `${surfaceSeries[surfaceSeries.length - 1].observed >= surfaceSeries[0].observed ? "+" : "−"}${Math.abs(surfaceSeries[surfaceSeries.length - 1].observed - surfaceSeries[0].observed).toFixed(2)} °C over January (observed)`
+                surfaceDelta !== null && Math.abs(surfaceDelta) > 0.004
+                  ? `${surfaceDelta >= 0 ? "+" : "−"}${Math.abs(surfaceDelta).toFixed(2)} °C over January (observed)`
                   : "Surface, January 2026 · regional observation mean"
               }
               tooltip="The average sea-surface temperature measured by stations in the selected region this month."
@@ -201,6 +157,11 @@ export default function Analytics({ settings }: { settings: AppSettings }) {
           subtitle={`Monthly mean by depth · model vs observed · ${def.label}`}
           tooltip="Monthly averages at each depth level. Diverging model (blue) and observed (teal) curves with depth reveal biases in the model's vertical structure."
         >
+          {depthProfile.loading ? (
+            <ChartSkeleton height={250} />
+          ) : depthComparison.every((d) => d.model === null && d.observed === null) ? (
+            <EmptyState compact icon={ArrowUpDown} title="No data available for current filters" body="No region stations sample these depths this month." />
+          ) : (
           <ResponsiveContainer width="100%" height={250}>
             <ComposedChart data={depthComparison} layout="vertical" margin={{ top: 8, right: 16, bottom: 0, left: 4 }}>
               <CartesianGrid stroke="#E8EEF5" horizontal={false} />
@@ -211,6 +172,7 @@ export default function Analytics({ settings }: { settings: AppSettings }) {
               <Line dataKey="observed" name="Observed" stroke="#0D9488" strokeWidth={2} dot={{ r: 3, fill: "#0D9488" }} />
             </ComposedChart>
           </ResponsiveContainer>
+          )}
         </ChartCard>
       </div>
 
@@ -364,7 +326,7 @@ function CrossSectionSVG({ cells, variable }: { cells: ReturnType<typeof transec
           ))}
         </div>
         <span className="text-[11px] text-slate-500">{def.domain(0)[1]} {def.unit}</span>
-        <span className="ml-auto text-[11px] text-slate-400">Colour scale shown for surface range; deeper layers use depth-adjusted ranges.</span>
+        <span className="ml-auto text-[11px] font-medium text-slate-400">Prototype cross-section based on curated sample data.</span>
       </div>
     </div>
   );
