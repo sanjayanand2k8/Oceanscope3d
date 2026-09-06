@@ -20,6 +20,7 @@ import Validation from "./pages/Validation";
 import DataSources from "./pages/DataSources";
 import Analytics from "./pages/Analytics";
 import Methodology from "./pages/Methodology";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 export interface AppSettings {
   defaultRegion: RegionKey;
@@ -136,7 +137,9 @@ export default function App() {
 
       <Layout current={route} onGlossary={openGlossary} onSettings={openSettings} dataMode={dataMode}>
         <div id="main-content" key={`${route}-${epoch}`} aria-label={activeNav?.label} className="page-enter">
-          {page}
+          <ErrorBoundary resetKey={`${route}-${epoch}`}>
+            {page}
+          </ErrorBoundary>
         </div>
       </Layout>
 
