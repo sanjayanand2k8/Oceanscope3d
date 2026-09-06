@@ -1,0 +1,16 @@
+# OceanScope 3D backend — curated-data MVP
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+
+# --- Future scientific pipeline (NOT required for this MVP) ---
+# The JSON loaders in app/services/ocean_data_service.py are the seam where
+# real datasets attach later:
+#   numpy      — gridded math & nearest-cell matching
+#   pandas     — CSV in-situ ingestion, time alignment
+#   xarray     — NetCDF model output
+#   netCDF4    — xarray backend for NetCDF files
+# numpy>=1.26
+# pandas>=2.2
+# xarray>=2024.6
+# netCDF4>=1.6
