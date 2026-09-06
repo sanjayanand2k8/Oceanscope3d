@@ -196,8 +196,9 @@ export const VARIABLES: VariableDef[] = [
     decimals: 2,
     palette: ["#1D4ED8", "#0284C7", "#06B6D4", "#FDE047", "#F97316", "#DC2626"],
     domain: (d) => (d === 0 ? [25, 31] : d === 50 ? [21, 28] : d === 100 ? [15.5, 22.5] : [10, 16.5]),
-    goodBelow: 0.4,
-    moderateBelow: 0.9,
+    // Agreement thresholds — shared contract with the FastAPI backend
+    goodBelow: 0.5,
+    moderateBelow: 1.5,
     explainer: "How warm the seawater is. Temperature drives cyclones, monsoon rainfall and marine ecosystems.",
   },
   {
@@ -208,8 +209,8 @@ export const VARIABLES: VariableDef[] = [
     decimals: 2,
     palette: ["#99F6E4", "#5EEAD4", "#2DD4BF", "#0D9488", "#0F766E", "#134E4A"],
     domain: () => [30, 36.5],
-    goodBelow: 0.2,
-    moderateBelow: 0.5,
+    goodBelow: 0.3,
+    moderateBelow: 0.8,
     explainer: "Salt content of seawater in Practical Salinity Units. Fresh river water lowers salinity near the coast.",
   },
   {
@@ -220,8 +221,8 @@ export const VARIABLES: VariableDef[] = [
     decimals: 2,
     palette: ["#EDE9FE", "#DDD6FE", "#C4B5FD", "#8B5CF6", "#6D28D9", "#4C1D95"],
     domain: () => [0, 1.5],
-    goodBelow: 0.12,
-    moderateBelow: 0.35,
+    goodBelow: 0.15,
+    moderateBelow: 0.4,
     explainer: "Speed of horizontal water movement. Currents transport heat, nutrients, larvae and pollutants.",
   },
 ];
@@ -257,15 +258,16 @@ export const STATIONS: Station[] = [
   { id: "ARGO-IN-1031", name: "North Bay Argo", platform: "Argo Float", lon: 90.1, lat: 16.8, region: "bob", depths: [0, 50, 100, 200], qc: "flagged", status: "active", lastUpdate: "30 Jan 2026, 22:10 IST" },
   { id: "ARGO-IN-0987", name: "Lakshadweep Argo", platform: "Argo Float", lon: 69.5, lat: 12.8, region: "arabian", depths: [0, 50, 100, 200], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 04:45 IST" },
   { id: "ARGO-IN-0954", name: "Konkan Argo", platform: "Argo Float", lon: 73.2, lat: 18.4, region: "arabian", depths: [0, 50, 100, 200], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 03:15 IST" },
-  { id: "ARGO-IN-1188", name: "Ceylon Argo", platform: "Argo Float", lon: 83.6, lat: 7.2, region: "bob", depths: [0, 50, 100, 200], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 06:05 IST" },
+  { id: "ARGO-IN-1187", name: "Ceylon Argo", platform: "Argo Float", lon: 83.6, lat: 7.2, region: "bob", depths: [0, 50, 100, 200], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 06:05 IST" },
   { id: "BUOY-BOB-07", name: "Chennai Coastal Buoy", platform: "Moored Buoy", lon: 80.9, lat: 13.7, region: "tn", depths: [0, 50], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 07:00 IST" },
+  { id: "BUOY-TN-03", name: "Thoothukudi Buoy", platform: "Moored Buoy", lon: 79.0, lat: 9.4, region: "tn", depths: [0, 50], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 06:50 IST" },
   { id: "BUOY-BOB-08", name: "Paradip Buoy", platform: "Moored Buoy", lon: 85.3, lat: 18.5, region: "bob", depths: [0, 50], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 06:40 IST" },
   { id: "BUOY-BOB-11", name: "South Bay Buoy", platform: "Moored Buoy", lon: 89.6, lat: 8.4, region: "bob", depths: [0, 50], qc: "passed", status: "maintenance", lastUpdate: "29 Jan 2026, 18:20 IST" },
   { id: "BUOY-AS-04", name: "Goa Offshore Buoy", platform: "Moored Buoy", lon: 66.8, lat: 18.9, region: "arabian", depths: [0, 50], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 05:50 IST" },
   { id: "BUOY-AND-02", name: "Port Blair Buoy", platform: "Moored Buoy", lon: 91.9, lat: 11.3, region: "andaman", depths: [0, 50], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 06:25 IST" },
   { id: "RAMA-IN-04", name: "Andaman Deep Mooring", platform: "Moored Array", lon: 93.4, lat: 8.1, region: "andaman", depths: [0, 50, 100, 200], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 05:10 IST" },
   { id: "SHIP-IO-221", name: "ORV Sagar Kanya", platform: "Ship Observation", lon: 76.4, lat: 4.1, region: "indian", depths: [0, 50, 100, 200], qc: "passed", status: "active", lastUpdate: "30 Jan 2026, 21:30 IST" },
-  { id: "SHIP-IO-215", name: "FV Sagar Sampada", platform: "Ship Observation", lon: 72.8, lat: 16.2, region: "arabian", depths: [0, 50, 100, 200], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 02:40 IST" },
+  { id: "SHIP-AS-118", name: "FV Sagar Sampada", platform: "Ship Observation", lon: 72.8, lat: 16.2, region: "arabian", depths: [0, 50, 100, 200], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 02:40 IST" },
   { id: "SHIP-IO-233", name: "Coastal Survey Vessel", platform: "Ship Observation", lon: 84.6, lat: 19.4, region: "bob", depths: [0, 50, 100, 200], qc: "passed", status: "active", lastUpdate: "31 Jan 2026, 01:55 IST" },
 ];
 
@@ -365,11 +367,11 @@ function biasFor(stationId: string, variable: VariableKey, depth: number): numbe
   const flagged = HIGH_DEV_STATIONS.has(stationId) ? Math.sign(base || 1) * 0.62 : 0;
   switch (variable) {
     case "temperature":
-      return base * 0.62 * (1 + depth / 150) + flagged * (1.05 + depth / 150) + 0.04;
+      return base * 0.58 * (1 + depth / 130) + flagged * (1.45 + depth / 120) + 0.04;
     case "salinity":
-      return base * 0.18 * depthScale + flagged * 0.26 - 0.05;
+      return base * 0.18 * depthScale + flagged * 1.3 - 0.05;
     case "current":
-      return base * 0.11 * depthScale + flagged * 0.15 - 0.02;
+      return base * 0.11 * depthScale + flagged * 0.75 - 0.02;
   }
 }
 
@@ -392,8 +394,9 @@ export function modelValue(station: Station, variable: VariableKey, depth: numbe
 export function statusFor(variable: VariableKey, diff: number): StatusLevel {
   const def = variableByKey(variable);
   const a = Math.abs(diff);
-  if (a < def.goodBelow) return "good";
-  if (a < def.moderateBelow) return "moderate";
+  // Inclusive bounds — shared contract with the FastAPI agreement rules.
+  if (a <= def.goodBelow) return "good";
+  if (a <= def.moderateBelow) return "moderate";
   return "high";
 }
 
@@ -423,43 +426,110 @@ export function stationSeries(station: Station, variable: VariableKey, depth: nu
   return out;
 }
 
-/** Regional mean time series (average of all stations inside the region). */
+/**
+ * Regional mean time series, built from the matched records themselves so the
+ * observed line only ever averages stations that actually reported that day.
+ * Days on which the network delivered nothing are omitted rather than
+ * interpolated.
+ */
 export function regionSeries(spec: FilterSpec): SeriesPoint[] {
+  const byDay = new Map<number, { o: number; m: number; n: number }>();
   const stations = stationsInRegion(spec.region).filter((s) => s.depths.includes(spec.depth));
-  const out: SeriesPoint[] = [];
-  for (let d = spec.fromDay; d <= spec.toDay; d++) {
-    let o = 0, m = 0;
-    for (const s of stations) {
-      o += observedValue(s, spec.variable, spec.depth, d);
-      m += modelValue(s, spec.variable, spec.depth, d);
-    }
-    const n = stations.length || 1;
-    out.push({ date: shortDate(d), day: d, observed: +(o / n).toFixed(3), model: +(m / n).toFixed(3), diff: +((m - o) / n).toFixed(3) });
-  }
-  return out;
-}
-
-export function scatterData(spec: FilterSpec): ScatterPoint[] {
-  const stations = stationsInRegion(spec.region).filter((s) => s.depths.includes(spec.depth));
-  const out: ScatterPoint[] = [];
   for (const s of stations) {
-    for (let d = spec.fromDay; d <= spec.toDay; d += 2) {
-      const obs = +observedValue(s, spec.variable, spec.depth, d).toFixed(3);
-      const mdl = +modelValue(s, spec.variable, spec.depth, d).toFixed(3);
-      out.push({ id: `${s.id}-${d}`, stationId: s.id, model: mdl, observed: obs, status: statusFor(spec.variable, mdl - obs) });
+    for (let d = spec.fromDay; d <= spec.toDay; d += OBS_INTERVAL_DAYS) {
+      if (!isRecordAvailable(s, spec.variable, spec.depth, d)) continue;
+      const entry = byDay.get(d) ?? { o: 0, m: 0, n: 0 };
+      entry.o += observedValue(s, spec.variable, spec.depth, d);
+      entry.m += modelValue(s, spec.variable, spec.depth, d);
+      entry.n += 1;
+      byDay.set(d, entry);
     }
   }
-  return out;
+  return [...byDay.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([day, e]) => ({
+      date: shortDate(day),
+      day,
+      observed: +(e.o / e.n).toFixed(3),
+      model: +(e.m / e.n).toFixed(3),
+      diff: +((e.m - e.o) / e.n).toFixed(3),
+    }));
 }
 
+/** Scatter cloud — one point per matched record, so it mirrors the table exactly. */
+export function scatterData(spec: FilterSpec): ScatterPoint[] {
+  return matchRecords(spec).map((r, i) => ({
+    id: `${r.stationId}-${r.date}-${i}`,
+    stationId: r.stationId,
+    model: r.model,
+    observed: r.observed,
+    status: r.status,
+  }));
+}
+
+/** Nominal in-situ sampling interval used to build the match-up set (days). */
+export const OBS_INTERVAL_DAYS = 2;
+
+/**
+ * Deterministic availability gate for a single observation slot.
+ *
+ * Real observation networks are never 100% complete: telemetry drops out,
+ * instruments go offline for maintenance, and records fail automated QC.
+ * Modelling those gaps here is what makes "Observation Coverage" a genuinely
+ * derived statistic rather than a decorative number.
+ */
+/** Days on which a satellite downlink outage degraded the whole network. */
+export const NETWORK_OUTAGE_DAYS = new Set([9, 23]);
+
+export function isRecordAvailable(station: Station, variable: VariableKey, depth: number, day: number): boolean {
+  let p = 0.99; // healthy moored / profiling platform
+  if (station.platform === "Ship Observation") p = 0.96; // cruise-based, batch delivered
+  if (station.status === "maintenance") p = 0.85; // partially offline during the window
+  if (station.qc === "flagged" && variable === "salinity") p -= 0.2; // drift rejected by delayed-mode QC
+  p -= depth * 0.00025; // deeper sensors drop out marginally more often
+  if (NETWORK_OUTAGE_DAYS.has(day)) p *= 0.65; // basin-wide telemetry outage
+  // uniform deterministic draw in [0,1) for this exact slot
+  const draw = (hashStr(`${station.id}|${variable}|${depth}|${day}|avail`) % 100000) / 100000;
+  return draw < p;
+}
+
+/** Quality flag for a delivered observation — shared convention with the backend API. */
+export type QualityFlag = "pass" | "suspect";
+
+export function qualityFlagFor(station: Station, variable: VariableKey, depth: number, day: number): QualityFlag {
+  // The QC-flagged float intermittently fails delayed-mode salinity audits.
+  if (station.qc === "flagged" && variable === "salinity" && hashStr(`${station.id}|${depth}|${day}|qflag`) % 4 === 0) {
+    return "suspect";
+  }
+  return "pass";
+}
+
+/** Number of observation slots the network *should* deliver for these filters. */
+export function expectedRecordCount(spec: FilterSpec): number {
+  const stations = stationsInRegion(spec.region).filter((s) => s.depths.includes(spec.depth));
+  let slots = 0;
+  for (let d = spec.fromDay; d <= spec.toDay; d += OBS_INTERVAL_DAYS) slots++;
+  return stations.length * slots;
+}
+
+/**
+ * The single source of truth for this page: every observation matched to its
+ * nearest model grid cell. MAE, RMSE, bias, coverage, the scatter cloud, the
+ * heatmap and the table are all computed from exactly this array.
+ */
 export function matchRecords(spec: FilterSpec): MatchRecord[] {
   const stations = stationsInRegion(spec.region).filter((s) => s.depths.includes(spec.depth));
   const out: MatchRecord[] = [];
   for (const s of stations) {
-    for (let d = spec.fromDay; d <= spec.toDay; d += 2) {
-      const obs = observedValue(s, spec.variable, spec.depth, d);
-      const mdl = modelValue(s, spec.variable, spec.depth, d);
-      const diff = mdl - obs;
+    for (let d = spec.fromDay; d <= spec.toDay; d += OBS_INTERVAL_DAYS) {
+      if (!isRecordAvailable(s, spec.variable, spec.depth, d)) continue; // telemetry gap
+      if (qualityFlagFor(s, spec.variable, spec.depth, d) === "suspect") continue; // QC reject
+      // Round first, then derive: guarantees the published columns satisfy
+      // model − observed = diff exactly, and that the status badge always
+      // agrees with the difference actually shown to the user.
+      const observed = +observedValue(s, spec.variable, spec.depth, d).toFixed(3);
+      const model = +modelValue(s, spec.variable, spec.depth, d).toFixed(3);
+      const diff = +(model - observed).toFixed(3);
       out.push({
         stationId: s.id,
         platform: s.platform,
@@ -467,9 +537,9 @@ export function matchRecords(spec: FilterSpec): MatchRecord[] {
         lat: s.lat,
         lon: s.lon,
         depth: spec.depth,
-        model: +mdl.toFixed(3),
-        observed: +obs.toFixed(3),
-        diff: +diff.toFixed(3),
+        model,
+        observed,
+        diff,
         status: statusFor(spec.variable, diff),
       });
     }
@@ -477,42 +547,108 @@ export function matchRecords(spec: FilterSpec): MatchRecord[] {
   return out;
 }
 
-export function validationMetrics(spec: FilterSpec): { mae: number; rmse: number; bias: number; n: number } {
+/**
+ * Standard model-validation statistics, all computed from the same matched
+ * record set so the page can never contradict itself.
+ *
+ *   bias = mean(model − obs)
+ *   MAE  = mean|model − obs|
+ *   RMSE = sqrt(mean((model − obs)²))
+ *   SDE  = sqrt(mean((diff − bias)²))   ("centred" / unbiased RMSE)
+ *   r    = Pearson correlation between modelled and observed values
+ *
+ * The identity RMSE² = bias² + SDE² holds exactly and is surfaced in the UI.
+ */
+export function validationMetrics(spec: FilterSpec): {
+  mae: number;
+  rmse: number;
+  bias: number;
+  sde: number;
+  r: number;
+  n: number;
+} {
   const recs = matchRecords(spec);
-  if (!recs.length) return { mae: 0, rmse: 0, bias: 0, n: 0 };
-  let sa = 0, ss = 0, sb = 0;
+  const n = recs.length;
+  if (!n) return { mae: 0, rmse: 0, bias: 0, sde: 0, r: 0, n: 0 };
+
+  let sa = 0, ss = 0, sb = 0, sm = 0, so = 0;
   for (const r of recs) {
     sa += Math.abs(r.diff);
     ss += r.diff * r.diff;
     sb += r.diff;
+    sm += r.model;
+    so += r.observed;
   }
-  const n = recs.length;
-  return { mae: sa / n, rmse: Math.sqrt(ss / n), bias: sb / n, n };
+  const bias = sb / n;
+  const rmse = Math.sqrt(ss / n);
+  // centred RMSE: spread of the error once the systematic offset is removed
+  const sde = Math.sqrt(Math.max(rmse * rmse - bias * bias, 0));
+
+  // Pearson correlation between modelled and observed values
+  const mBar = sm / n;
+  const oBar = so / n;
+  let cov = 0, vm = 0, vo = 0;
+  for (const rec of recs) {
+    const dm = rec.model - mBar;
+    const do_ = rec.observed - oBar;
+    cov += dm * do_;
+    vm += dm * dm;
+    vo += do_ * do_;
+  }
+  const r = vm > 0 && vo > 0 ? cov / Math.sqrt(vm * vo) : 0;
+
+  return { mae: sa / n, rmse, bias, sde, r, n };
 }
 
-/** Deterministic data coverage %, slightly lower at deeper levels. */
+/**
+ * Observation coverage, derived — not assumed.
+ * coverage = usable matched records ÷ records the network should have delivered.
+ * Responds to region, depth and date range because all three change both terms.
+ */
 export function coverageFor(spec: FilterSpec): number {
-  const regionPenalty: Record<RegionKey, number> = { bob: 5.1, arabian: 6.2, indian: 7.4, tn: 9.8, andaman: 8.6 };
-  const varPenalty = spec.variable === "current" ? 2.6 : spec.variable === "salinity" ? 1.2 : 0;
-  const v = 97.5 - regionPenalty[spec.region] - spec.depth * 0.02 - varPenalty;
-  return clamp(v, 80, 98.5);
+  const expected = expectedRecordCount(spec);
+  if (!expected) return 0;
+  return clamp((matchRecords(spec).length / expected) * 100, 0, 100);
 }
 
+/** Least-squares fit of model on observation — drawn against the 1:1 line. */
+export function regressionFit(records: MatchRecord[]): { slope: number; intercept: number } | null {
+  const n = records.length;
+  if (n < 3) return null;
+  let sx = 0, sy = 0;
+  for (const r of records) {
+    sx += r.observed;
+    sy += r.model;
+  }
+  const xBar = sx / n;
+  const yBar = sy / n;
+  let num = 0, den = 0;
+  for (const r of records) {
+    const dx = r.observed - xBar;
+    num += dx * (r.model - yBar);
+    den += dx * dx;
+  }
+  if (den === 0) return null;
+  const slope = num / den;
+  return { slope, intercept: yBar - slope * xBar };
+}
+
+/** Depth-wise MAE and bias, each level scored from its own matched records. */
 export function depthAgreement(spec: FilterSpec): DepthAgreement[] {
   const depths: Depth[] = [0, 50, 100, 200];
-  return depths.map((depth) => {
-    const stations = stationsInRegion(spec.region).filter((s) => s.depths.includes(depth));
-    let n = 0, sa = 0, sb = 0;
-    for (const s of stations) {
-      for (let d = spec.fromDay; d <= spec.toDay; d += 3) {
-        const diff = modelValue(s, spec.variable, depth, d) - observedValue(s, spec.variable, depth, d);
-        sa += Math.abs(diff);
-        sb += diff;
-        n++;
+  return depths
+    .map((depth) => {
+      const recs = matchRecords({ ...spec, depth });
+      const n = recs.length;
+      if (!n) return { depth, mae: 0, bias: 0, n: 0 };
+      let sa = 0, sb = 0;
+      for (const r of recs) {
+        sa += Math.abs(r.diff);
+        sb += r.diff;
       }
-    }
-    return { depth, mae: n ? +(sa / n).toFixed(3) : 0, bias: n ? +(sb / n).toFixed(3) : 0, n };
-  }).filter((d) => d.n > 0);
+      return { depth, mae: +(sa / n).toFixed(3), bias: +(sb / n).toFixed(3), n };
+    })
+    .filter((d) => d.n > 0);
 }
 
 export function errorHistogram(spec: FilterSpec): ErrorBin[] {
@@ -527,41 +663,112 @@ export function errorHistogram(spec: FilterSpec): ErrorBin[] {
   const counts = [0, 0, 0, 0];
   for (const r of matchRecords(spec)) {
     const a = Math.abs(r.diff);
-    for (let i = 0; i < 4; i++) {
-      if (a >= edges[i] && a < edges[i + 1]) {
-        counts[i]++;
-        break;
-      }
-    }
+    // buckets are right-closed at each boundary: every bucket matches its status class
+    if (a <= edges[1]) counts[0]++;
+    else if (a <= edges[2]) counts[1]++;
+    else if (a <= edges[3]) counts[2]++;
+    else counts[3]++;
   }
   return labels.map((range, i) => ({ range: `${range} ${def.unit}`, count: counts[i] }));
 }
 
-/** Mean |error| on a coarse lon/lat grid — used by the error heatmap. */
+/**
+ * Mean |error| on a coarse lon/lat grid, derived from the *actual* matched
+ * records: each station's observed MAE is mapped onto the grid cells within
+ * its representative radius. Cells with no supporting observation inside the
+ * radius are returned as unobserved (error = null) rather than invented.
+ */
 export function errorGrid(spec: FilterSpec, step = 2): ErrorCell[] {
   const region = regionByKey(spec.region);
+  const records = matchRecords(spec);
+  if (!records.length) return [];
+
+  // per-station MAE straight from the matched records
+  const byStation = new Map<string, { lon: number; lat: number; sum: number; n: number }>();
+  for (const r of records) {
+    const entry = byStation.get(r.stationId) ?? { lon: r.lon, lat: r.lat, sum: 0, n: 0 };
+    entry.sum += Math.abs(r.diff);
+    entry.n += 1;
+    byStation.set(r.stationId, entry);
+  }
+  const anchors = [...byStation.entries()].map(([id, e]) => ({
+    id,
+    lon: e.lon,
+    lat: e.lat,
+    mae: e.sum / e.n,
+    n: e.n,
+  }));
+
+  /** Representative radius of a single station, in degrees. */
+  const RADIUS = 6;
   const cells: ErrorCell[] = [];
-  const stations = stationsInRegion(spec.region).filter((s) => s.depths.includes(spec.depth));
   for (let lon = region.bbox.lonMin + step / 2; lon < region.bbox.lonMax; lon += step) {
     for (let lat = region.bbox.latMin + step / 2; lat < region.bbox.latMax; lat += step) {
       if (isLand(lon, lat)) continue;
-      // blend of distance to nearest stations: nearby stations anchor the error field
-      let best = Infinity;
-      let err = 0;
-      for (const s of stations) {
-        const dist = Math.hypot(s.lon - lon, s.lat - lat);
-        if (dist < best) {
-          best = dist;
-          err = Math.abs(
-            noise(`${s.id}|${spec.variable}|${spec.depth}|bias`, 1) *
-              (spec.variable === "temperature" ? 0.42 : spec.variable === "salinity" ? 0.2 : 0.11) *
-              (1 + spec.depth / 120) +
-              (HIGH_DEV_STATIONS.has(s.id) ? 0.5 * (spec.variable === "salinity" ? 0.4 : 1) : 0)
-          );
+      // inverse-distance weighted mean of nearby station MAEs
+      let wSum = 0, vSum = 0, nSum = 0, nearest = Infinity, nearestId = "";
+      for (const a of anchors) {
+        const dist = Math.hypot(a.lon - lon, a.lat - lat);
+        if (dist < nearest) {
+          nearest = dist;
+          nearestId = a.id;
+        }
+        if (dist <= RADIUS) {
+          const w = 1 / (dist * dist + 0.75);
+          wSum += w;
+          vSum += w * a.mae;
+          nSum += a.n;
         }
       }
-      const falloff = clamp(1.35 - best / 9, 0.25, 1.1);
-      cells.push({ lon, lat, error: +(err * falloff).toFixed(3) });
+      cells.push(
+        wSum > 0
+          ? { lon, lat, error: +(vSum / wSum).toFixed(3), n: nSum, nearestStation: nearestId }
+          : { lon, lat, error: null, n: 0, nearestStation: nearestId }
+      );
+    }
+  }
+  return cells;
+}
+
+/**
+ * Same derivation as errorGrid() but operating on caller-supplied records.
+ * Used when the matched records arrive over the API instead of the local
+ * engine, so both data modes render identical heatmaps.
+ */
+export function errorGridFromRecords(records: MatchRecord[], regionKey: RegionKey, step = 2): ErrorCell[] {
+  const region = regionByKey(regionKey);
+  const byStation = new Map<string, { lon: number; lat: number; sum: number; n: number }>();
+  for (const r of records) {
+    const entry = byStation.get(r.stationId) ?? { lon: r.lon, lat: r.lat, sum: 0, n: 0 };
+    entry.sum += Math.abs(r.diff);
+    entry.n += 1;
+    byStation.set(r.stationId, entry);
+  }
+  const anchors = [...byStation.entries()].map(([id, e]) => ({ id, lon: e.lon, lat: e.lat, mae: e.sum / e.n, n: e.n }));
+  const RADIUS = 6;
+  const cells: ErrorCell[] = [];
+  for (let lon = region.bbox.lonMin + step / 2; lon < region.bbox.lonMax; lon += step) {
+    for (let lat = region.bbox.latMin + step / 2; lat < region.bbox.latMax; lat += step) {
+      if (isLand(lon, lat)) continue;
+      let wSum = 0, vSum = 0, nSum = 0, nearest = Infinity, nearestId = "";
+      for (const a of anchors) {
+        const dist = Math.hypot(a.lon - lon, a.lat - lat);
+        if (dist < nearest) {
+          nearest = dist;
+          nearestId = a.id;
+        }
+        if (dist <= RADIUS) {
+          const w = 1 / (dist * dist + 0.75);
+          wSum += w;
+          vSum += w * a.mae;
+          nSum += a.n;
+        }
+      }
+      cells.push(
+        wSum > 0
+          ? { lon, lat, error: +(vSum / wSum).toFixed(3), n: nSum, nearestStation: nearestId }
+          : { lon, lat, error: null, n: 0, nearestStation: nearestId }
+      );
     }
   }
   return cells;
@@ -582,7 +789,7 @@ export function interpretationFor(spec: FilterSpec): string[] {
     out.push(`Model agreement is consistent across the sampled depth layers in the selected ${region.label} region.`);
   } else {
     out.push(
-      `Model performance is strongest at ${depthName(best.depth)} (MAE ${best.mae.toFixed(2)} ${def.unit}) and weakest at ${depthName(worst.depth)} (MAE ${worst.mae.toFixed(2)} ${def.unit}) in the selected ${region.label} region.`
+      `Model performance is strongest at ${depthName(best.depth)} (MAE ${best.mae.toFixed(2)} ${def.unit}, n = ${best.n}) and weakest at ${depthName(worst.depth)} (MAE ${worst.mae.toFixed(2)} ${def.unit}, n = ${worst.n}) in the selected ${region.label} region.`
     );
   }
   if (metrics.bias < -0.05) {
@@ -592,8 +799,33 @@ export function interpretationFor(spec: FilterSpec): string[] {
   } else {
     out.push("Mean bias is close to zero: model and observations agree well on average.");
   }
+
+  // error-structure note from the bias / centred-RMSE split
+  const systematicShare = metrics.rmse > 0 ? (metrics.bias * metrics.bias) / (metrics.rmse * metrics.rmse) : 0;
+  if (systematicShare > 0.5) {
+    out.push(
+      `Systematic offset accounts for ${(systematicShare * 100).toFixed(0)}% of the total squared error, so most of the mismatch is a correctable bias rather than random scatter.`
+    );
+  } else {
+    out.push(
+      `Random scatter dominates: only ${(systematicShare * 100).toFixed(0)}% of the squared error is systematic bias, so a simple offset correction would not remove most of the error.`
+    );
+  }
+
   if (worst.depth >= 100) {
     out.push("Larger deviations below the thermocline may reflect unresolved subsurface mixing in the model's vertical scheme.");
+  }
+
+  // honest caveats about the evidence base
+  const coverage = coverageFor(spec);
+  const expected = expectedRecordCount(spec);
+  if (coverage < 85) {
+    out.push(
+      `Caution: only ${metrics.n} of ${expected} expected observations were usable (${coverage.toFixed(1)}% coverage), so these scores rest on an incomplete sample.`
+    );
+  }
+  if (metrics.n < 30) {
+    out.push(`Sample size is small (n = ${metrics.n}); widen the date range or region before drawing firm conclusions.`);
   }
   return out;
 }
