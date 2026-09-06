@@ -150,7 +150,7 @@ function gridRegion(lon: number, lat: number): OceanRegion {
 /* ---------------------------- fallbacks ----------------------------- */
 
 export function fallbackHealth(): HealthResponse {
-  return { status: "ok", service: "OceanScope 3D (embedded sample engine)", data_mode: "curated_sample_data", version: "fallback-1.0.0" };
+  return { status: "ok", service: "OceanScope 3D API", data_mode: "curated_sample_data", version: "1.0.0", message: "API operational. No live agency data sources are connected." };
 }
 
 export function fallbackVariables(): VariableInfo[] {

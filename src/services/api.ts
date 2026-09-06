@@ -56,23 +56,24 @@ import {
   stationById,
   variableByKey,
 } from "../data/ocean";
-import {
-  VAR_TO_API,
-  apiPlatformLabel,
-  dayOfIso,
-  fallbackComparison,
-  fallbackDataSources,
-  fallbackDepthProfile,
-  fallbackHealth,
-  fallbackInsights,
-  fallbackOceanData,
-  fallbackObservations,
-  fallbackRegions,
-  fallbackStations,
-  fallbackTimeSeries,
-  fallbackValidationMetrics,
-  fallbackVariables,
-} from "../data/fallbackMockData";
+const VAR_TO_API: Record<VariableKey, OceanVariable> = {
+  temperature: "temperature",
+  salinity: "salinity",
+  current: "currents",
+};
+const dayOfIso = (timestamp: string) => Number(timestamp.slice(8, 10));
+function apiPlatformLabel(platform: string, stationId?: string): "Argo Float" | "Moored Buoy" | "Moored Array" | "Ship Observation" {
+  if (platform === "argo") return "Argo Float";
+  if (platform === "buoy") return stationId?.startsWith("RAMA") ? "Moored Array" : "Moored Buoy";
+  return "Ship Observation";
+}
+
+type FallbackModule = typeof import("../data/fallbackMockData");
+let fallbackModulePromise: Promise<FallbackModule> | undefined;
+function loadFallback(): Promise<FallbackModule> {
+  fallbackModulePromise ??= import("../data/fallbackMockData");
+  return fallbackModulePromise;
+}
 
 /* --------------------------- configuration -------------------------- */
 
@@ -183,21 +184,21 @@ const toApi = (params: CommonFilterParams): Record<string, string | number | und
 /* ======================= typed endpoint functions ==================== */
 
 export async function getHealth(): Promise<HealthResponse> {
-  return (await callApi<HealthResponse>("/api/health", {})) ?? fallbackHealth();
+  return (await callApi<HealthResponse>("/api/health", {})) ?? (await loadFallback()).fallbackHealth();
 }
 
 export async function getVariables(): Promise<VariableInfo[]> {
-  return (await callApi<VariableInfo[]>("/api/variables", {})) ?? fallbackVariables();
+  return (await callApi<VariableInfo[]>("/api/variables", {})) ?? (await loadFallback()).fallbackVariables();
 }
 
 export async function getRegions(): Promise<RegionInfoDto[]> {
-  return (await callApi<RegionInfoDto[]>("/api/regions", {})) ?? fallbackRegions();
+  return (await callApi<RegionInfoDto[]>("/api/regions", {})) ?? (await loadFallback()).fallbackRegions();
 }
 
 export async function getStations(region?: string): Promise<StationDto[]> {
   return (
     (await callApi<StationDto[]>("/api/stations", { region })) ??
-    fallbackStations((region as StationDto["region"] | undefined) ?? null)
+    (await loadFallback()).fallbackStations((region as StationDto["region"] | undefined) ?? null)
   );
 }
 
@@ -207,27 +208,27 @@ export async function getOceanData(params: CommonFilterParams & { day?: number }
     date: params.date ?? (params.day !== undefined ? iso(params.day) : undefined),
   });
   if (remote) return remote;
-  return fallbackOceanData({ ...params, day: params.day ?? (params.date ? dayOfIso(params.date + "T00:00:00Z") : 15) });
+  return (await loadFallback()).fallbackOceanData({ ...params, day: params.day ?? (params.date ? dayOfIso(params.date + "T00:00:00Z") : 15) });
 }
 
 export async function getObservations(params: CommonFilterParams): Promise<ObservationRecord[]> {
   const remote = await callApi<ObservationRecord[]>("/api/observations", toApi(params));
-  return remote ?? fallbackObservations(params);
+  return remote ?? (await loadFallback()).fallbackObservations(params);
 }
 
 export async function getComparisonData(params: CommonFilterParams): Promise<ComparisonRecord[]> {
   const remote = await callApi<ComparisonRecord[]>("/api/comparison", toApi(params));
-  return remote ?? fallbackComparison(params);
+  return remote ?? (await loadFallback()).fallbackComparison(params);
 }
 
 export async function getValidationMetrics(params: CommonFilterParams): Promise<ValidationMetricsApi> {
   const remote = await callApi<ValidationMetricsApi>("/api/validation-metrics", toApi(params));
-  return remote ?? fallbackValidationMetrics(params);
+  return remote ?? (await loadFallback()).fallbackValidationMetrics(params);
 }
 
 async function getDataSourcesRaw(): Promise<DataSourceApi[]> {
   const remote = await callApi<DataSourceApi[]>("/api/data-sources", {});
-  return remote ?? fallbackDataSources();
+  return remote ?? (await loadFallback()).fallbackDataSources();
 }
 
 export async function getDepthProfile(params: CommonFilterParams & { day?: number }): Promise<DepthProfileResponse> {
@@ -235,17 +236,17 @@ export async function getDepthProfile(params: CommonFilterParams & { day?: numbe
     ...toApi(params),
     date: params.date ?? (params.day !== undefined ? iso(params.day) : undefined),
   });
-  return remote ?? fallbackDepthProfile(params);
+  return remote ?? (await loadFallback()).fallbackDepthProfile(params);
 }
 
 export async function getTimeSeries(params: CommonFilterParams): Promise<TimeSeriesResponse> {
   const remote = await callApi<TimeSeriesResponse>("/api/time-series", toApi(params));
-  return remote ?? fallbackTimeSeries(params);
+  return remote ?? (await loadFallback()).fallbackTimeSeries(params);
 }
 
 export async function getInsightsRaw(params: CommonFilterParams): Promise<Insight[]> {
   const remote = await callApi<InsightsResponse>("/api/insights", toApi(params));
-  return remote ? remote.insights : fallbackInsights(params);
+  return remote ? remote.insights : (await loadFallback()).fallbackInsights(params);
 }
 
 /* ======================= page-facing adapters ======================== */
@@ -430,7 +431,7 @@ export async function getStationSnapshot(stationId: string, variable: VariableKe
     model: rec.model_value,
     diff: +rec.difference.toFixed(3),
     status: rec.agreement_status,
-    qualityFlag: rec.quality_flag,
+    qualityFlag: rec.quality_flag === "pass" || rec.quality_flag === "suspect" ? rec.quality_flag : undefined,
     availabilityNote: notes.length ? notes.join(" ") : undefined,
   };
   return { snapshot, noDataReason: null };
@@ -559,7 +560,7 @@ export async function getValidationBundle(spec: ExplorerSpec): Promise<Validatio
     rmse: metricsApi.root_mean_square_error,
     bias: metricsApi.mean_bias,
     sde: metricsApi.centred_rmse,
-    r: metricsApi.correlation_r,
+    r: metricsApi.correlation_r ?? 0,
     coverage: metricsApi.observation_coverage_percent,
     n: metricsApi.record_count,
     expected: metricsApi.applicable_count,

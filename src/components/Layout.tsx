@@ -106,7 +106,7 @@ function NavList({ current, onNavigate, onGlossary, onSettings, dataMode }: NavP
         ) : dataMode === "fallback" ? (
           <p className="flex items-center gap-2 text-[11.5px] font-semibold text-slate-200">
             <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" aria-hidden />
-            Curated sample data
+            Displaying curated sample data.
           </p>
         ) : (
           <p className="flex items-center gap-2 text-[11.5px] font-semibold text-slate-200">
@@ -115,7 +115,7 @@ function NavList({ current, onNavigate, onGlossary, onSettings, dataMode }: NavP
           </p>
         )}
         <p className="mt-1.5 text-[10.5px] leading-relaxed text-slate-400">
-          Prototype v0.9 · {dataMode === "api" ? "backend served" : "embedded fallback"}
+          Prototype v0.9 · {dataMode === "api" ? "API served" : "curated fallback"}
           <br />
           Team Nautilus · SIH 2026
         </p>

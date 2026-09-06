@@ -1,209 +1,92 @@
-# OceanScope 3D — full-stack prototype
+# OceanScope 3D
 
-**Visualizing, validating, and understanding India's ocean data.**
-Smart India Hackathon 2026 · Ministry of Earth Sciences · Problem Statement **SIH26067** · Theme: Smart Automation
+**Visualizing, validating, and understanding India’s ocean data.** OceanScope 3D is a React dashboard for exploring curated sample model fields and in-situ observations for temperature, salinity, and ocean currents across Indian waters. The application is intentionally non-operational: it does not connect to live agency feeds, external ocean-data services, paid services, databases, or API keys.
 
-OceanScope 3D is a web-based interactive visualization platform that integrates **numerical
-ocean-model outputs** with **in-situ observations** (Argo floats, moored buoys, ship observations)
-across Indian waters — sea temperature, salinity and ocean currents — and validates the model
-against the measurements with standard statistics (Difference, MAE, RMSE, Bias, Observation
-Coverage).
+## Architecture
 
-- **Frontend:** React 19, TypeScript, Tailwind CSS 4, Recharts (Vite build)
-- **Backend:** Python 3, FastAPI, Pydantic, Uvicorn
-- **Data format for this MVP:** curated JSON sample files in `backend/app/data`
-- **No API keys, no secrets, no external paid services, no live external data calls.**
-  The app runs with **zero environment variables configured**; if the backend is offline the
-  frontend transparently uses an identical embedded sample dataset (clearly labelled).
+The frontend is a React 19, TypeScript, Tailwind CSS 4, and Recharts single-page application. The deployed application is served by a Cloudflare Worker defined in `worker/index.ts`. The Worker handles every request beginning with `/api/` before delegating all other requests to the Cloudflare static asset binding. This preserves SPA fallback behavior for the existing visual interface while ensuring API requests always return JSON rather than `index.html`.
 
----
+Curated server-side data is stored in `worker/data/` as JSON modules copied from the repository’s sample dataset. The frontend calls same-origin `/api` endpoints asynchronously through `src/services/api.ts`. If the Worker is unavailable, the frontend lazily loads a small curated fallback implementation and displays the subtle status badge **“Displaying curated sample data.”** Neither path implies that the data is live, official, or operational.
 
-## 1 · Running the full stack in Arena
+## Local development and Worker preview
 
-### Option A — single process (recommended, zero configuration)
+Install dependencies and build the existing frontend as usual:
 
 ```bash
-# 1. build the frontend (produces dist/index.html)
 npm install
 npm run build
-
-# 2. start the backend — it serves the API at /api/* and the dashboard at /
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --port 8000
-# open http://localhost:8000          (dashboard)
-# open http://localhost:8000/api/health
-# open http://localhost:8000/docs      (interactive API documentation)
 ```
 
-The frontend calls the API at the relative path `/api`, so same-origin serving needs **no**
-environment variables at all.
-
-### Option B — separate dev servers (hot reload)
+The Worker expects the compiled SPA in `dist/`. To run the Cloudflare Worker locally, install Wrangler if it is not already available and start the local preview:
 
 ```bash
-# terminal 1 — backend
-cd backend && uvicorn app.main:app --reload --port 8000
-
-# terminal 2 — frontend
-npm run dev           # Vite on http://localhost:5173
+npx wrangler dev
 ```
 
-Copy `.env.example` to `.env` and point the frontend at the backend:
-
-```
-VITE_API_BASE_URL=http://localhost:8000
-```
-
-(CORS on the backend already allows the Vite dev and preview origins; production deployments
-should extend the explicit allow-list rather than using `*`.)
-
-### Fallback behaviour (development safety net)
-
-If the backend is unreachable, every API call falls back to `src/data/fallbackMockData.ts`,
-a faithful embedded copy of the same sample dataset. The UI shows a subtle, non-blocking chip —
-**"Displaying curated sample data"** — with a Reconnect button; developer-level detail goes to
-the browser console only, and the app recovers automatically within 45 s once the API returns.
-
----
-
-## 2 · Architecture
-
-```
-frontend/  (vite root = repo root)
-  src/
-    components/         UI building blocks (OceanMap, FilterBar, DataTable, …)
-    pages/              Overview · Explorer · Validation · DataSources · Analytics · Methodology · Project
-    services/api.ts     typed API client + page adapters + fallback orchestration
-    types/ocean.ts      API contract types (mirrors backend/app/schemas.py)
-    types.ts            view-model types
-    data/fallbackMockData.ts   curated sample fallback (identical to backend data)
-    data/               deterministic mock-ocean engine (source of truth for samples)
-    hooks/useAsyncData.ts      loading / error / retry wrapper
-backend/
-  app/
-    main.py             FastAPI app, CORS, endpoints, optional static frontend serving
-    models.py           internal domain models
-    schemas.py          Pydantic API contract (mirrors src/types/ocean.ts)
-    services/
-      ocean_data_service.py    JSON loading, filters, grid interpolation (xarray seam)
-      validation_service.py    matching, MAE/RMSE/bias/coverage, rule-based insights
-    data/
-      ocean_model_sample.json  model grid + station-level model series
-      observations_sample.json stations + in-situ records
-      data_sources.json        dataset catalogue metadata
-  tools/
-    generate_sample_data.mjs   regenerates JSON from the shared engine
-    smoke_test.py              52 endpoint assertions (TestClient)
-    parity_test.py             proves backend == frontend fallback
-  requirements.txt
-```
-
-Request flow:
-
-```
-React page ──useAsyncData──▶ services/api.ts (typed client, 2.5 s timeout)
-                                   │
-                    local FastAPI reachable? ──no──▶ fallbackMockData.ts (identical data)
-                                   │ yes
-            FastAPI router ──▶ validation_service ──▶ ocean_data_service ──▶ JSON files
-```
-
----
-
-## 3 · API endpoints (all `GET`, documented live at `/docs`)
-
-| Endpoint | Purpose | Key parameters |
-|---|---|---|
-| `/api/health` | Liveness probe (`data_mode: curated_sample_data`) | — |
-| `/api/variables` | temperature, salinity, currents (+ thresholds) | — |
-| `/api/regions` | the five Indian Ocean regions | — |
-| `/api/stations` | observing-network inventory | `region` |
-| `/api/ocean-data` | model grid cells for map layers | `variable, region, depth, date` |
-| `/api/observations` | in-situ records | `variable, region, depth, platform, station_id, start_date, end_date` |
-| `/api/comparison` | matched model–observation pairs with difference & agreement status | `variable, region, depth, station_id, start_date, end_date` |
-| `/api/validation-metrics` | MAE, RMSE, bias, coverage, class counts, interpretation | `variable, region, depth, start_date, end_date` |
-| `/api/depth-profile` | 0 / 50 / 100 / 200 m model & observed values | `variable, station_id, region, date` |
-| `/api/time-series` | date-ordered model & observed series | `variable, station_id, region, depth, start_date, end_date` |
-| `/api/insights` | rule-based findings (deterministic, **no AI service**) | `variable, region, depth` |
-| `/api/data-sources` | dataset catalogue (4 sources, `is_sample_data: true`) | — |
-
-Validation behaviour: unknown variables/regions/platforms/depths, malformed dates or reversed
-ranges return **HTTP 422** with a useful message; unknown stations return **404**.
-
-**Computed dynamically, never precomputed cards:**
-
-```
-Difference  = model_value − observed_value       MAE  = mean|difference|
-RMSE²       = mean(difference²)  ⟹  RMSE² = bias² + centredRMSE²   Bias = mean(difference)
-Coverage    = valid matched records ÷ applicable observation slots
-```
-
-Agreement status thresholds: temperature `≤0.5 / ≤1.5 °C`, salinity `≤0.3 / ≤0.8 PSU`,
-currents `≤0.15 / ≤0.4 m/s` (good / moderate; beyond → high deviation).
-
----
-
-## 4 · Sample data — scope and limitations
-
-- Synthetic but realistic: SST ≈ 20–31 °C (depth-dependent), salinity ≈ 30–36 PSU,
-  currents ≈ 0.1–1.5 m/s; station network of 15 platforms (Argo, buoys, ships, moorings);
-  one month (Jan 2026), nominal 2-day sampling with modelled telemetry outages, platform
-  maintenance and QC rejections.
-- Contains Good Agreement, Moderate Agreement **and** High Deviation examples by design.
-- Deterministic: the same engine generates both the backend JSON and the frontend fallback,
-  and `backend/tools/parity_test.py` verifies they are identical.
-- Labels: every dataset reports `is_sample_data: true`; UI pages carry
-  "Curated sample data" badges. Nothing is presented as live government or satellite data.
-- Coastlines are simplified for illustration — **not for navigation**.
-
-Regenerate sample JSON after changing the engine:
+The local Worker will serve the dashboard and API from one origin. Example requests:
 
 ```bash
-node backend/tools/generate_sample_data.mjs
+curl http://localhost:8787/api/health
+curl 'http://localhost:8787/api/variables'
+curl 'http://localhost:8787/api/ocean-data?variable=temperature&region=bob&depth=50'
+curl 'http://localhost:8787/api/observations?variable=salinity&platform=argo&start_date=2026-01-01&end_date=2026-01-30'
+curl 'http://localhost:8787/api/comparison?variable=temperature&region=arabian&depth=0'
+curl 'http://localhost:8787/api/validation-metrics?variable=currents&region=indian&depth=50'
+curl 'http://localhost:8787/api/depth-profile?variable=temperature&station_id=ARGO-IN-1024'
+curl 'http://localhost:8787/api/time-series?variable=salinity&region=bob&depth=0'
+curl 'http://localhost:8787/api/insights?variable=temperature&region=tn&depth=50'
+curl http://localhost:8787/api/data-sources
 ```
 
----
+For frontend-only Vite development, run `npm run dev`. The client defaults to relative `/api` calls; set `VITE_API_BASE_URL` only when intentionally pointing the UI at a separate API origin.
 
-## 5 · Replacing sample JSON with real NetCDF / CSV data later
+## API contract
 
-The swap point is `backend/app/services/ocean_data_service.py/load_dataset()` — downstream
-services (comparison, metrics, insights) consume typed domain objects and need no changes.
+All routes are `GET` endpoints and return `application/json; charset=utf-8`. Responses use `Response.json()`-equivalent JSON serialization in the Worker. Invalid variables, regions, platforms, depths, dates, and reversed date ranges return HTTP `422` with a JSON `{ "detail": "..." }` message. Unknown station identifiers return HTTP `404`. Unknown API paths also return a JSON `404` response. Non-API paths are passed to the static asset service so the React SPA remains available.
 
-**Future Python pipeline:**
+| Endpoint | Response and supported query parameters |
+|---|---|
+| `/api/health` | Returns the service status, version `1.0.0`, `data_mode: curated_sample_data`, and an explicit no-live-sources message. |
+| `/api/variables` | Returns temperature, salinity, and currents with units and agreement thresholds. |
+| `/api/regions` | Returns Bay of Bengal, Arabian Sea, Indian Ocean, Tamil Nadu Coast, and Andaman Sea metadata. |
+| `/api/ocean-data` | Returns model grid points. Parameters: `variable`, `region`, `depth`, and optional `date`. |
+| `/api/observations` | Returns filtered in-situ records. Parameters: `variable`, `region`, `depth`, `start_date`, `end_date`, `platform`, and optional `station_id`. |
+| `/api/comparison` | Returns station ID, platform, coordinates, timestamp, depth, model value, observed value, difference, absolute error, quality flag, agreement status, unit, and region. Parameters: `variable`, `region`, `depth`, `start_date`, `end_date`, and optional `station_id`. |
+| `/api/validation-metrics` | Dynamically calculates MAE, RMSE, bias, coverage percentage, record count, agreement-class counts, and a plain-language rule-based interpretation. Parameters: `variable`, `region`, `depth`, `start_date`, and `end_date`. |
+| `/api/data-sources` | Returns the four curated source metadata cards: Numerical Ocean Model, Argo Float Network, Moored Buoy Network, and Ship-based Measurements. |
+| `/api/depth-profile` | Returns depth-level model and observed means for 0, 50, 100, and 200 metres. Parameters: `variable`, optional `region`, `station_id`, and `date`. |
+| `/api/time-series` | Returns date-ordered model and observed values. Parameters: `variable`, optional `region`, `station_id`, `depth`, `start_date`, and `end_date`. |
+| `/api/insights` | Returns deterministic, rule-based observations derived from the selected validation metrics. Parameters: `variable`, optional `region`, and `depth`. |
 
+Supported variable values are `temperature`, `salinity`, and `currents`. Supported regions are the keys `bob`, `arabian`, `indian`, `tn`, and `andaman`; the `/api/regions` response provides their labels. Supported depths are `0`, `50`, `100`, and `200`. Supported platforms are `argo`, `buoy`, and `ship`.
+
+## Dynamic validation calculations
+
+The Worker does not serve precomputed metric cards. It matches quality-passed observation records to the corresponding curated station model series and calculates the following for each request:
+
+```text
+Difference = model_value − observed_value
+MAE        = mean(|difference|)
+RMSE       = sqrt(mean(difference²))
+Bias       = mean(difference)
+Coverage   = matched records ÷ applicable observation records × 100
 ```
-NetCDF model output ─▶ xarray (open_mfdataset)
-                     ─▶ standardisation (dims, units °C/PSU/m·s⁻¹, qc flags)
-                     ─▶ spatial-temporal matching (pandas + NumPy nearest-neighbour)
-                     ─▶ validation metrics (existing service, unchanged)
-                     ─▶ FastAPI endpoints (existing contract, unchanged)
-                     ─▶ React dashboard (existing UI, unchanged)
-```
 
-CSV/NetCDF in-situ files follow the same path via `pandas.read_csv` / `xarray`. Suggested
-future packages (commented in `backend/requirements.txt`): `numpy`, `pandas`, `xarray`,
-`netCDF4`. A spatial database (PostgreSQL/PostGIS) can be added behind
-`ocean_data_service.py` for production station storage.
+Agreement thresholds are variable-specific: temperature uses `0.5 / 1.5 °C`, salinity uses `0.3 / 0.8 PSU`, and currents uses `0.15 / 0.4 m/s` for good and moderate agreement respectively. The remaining records are classified as high deviation.
 
-## 6 · Security note
+## Data limitations and security
 
-> **No API keys or secrets are needed for this curated-data MVP. Any future external-service
-> key must be stored in server-side secrets and must never be exposed to the frontend.**
+The bundled records are curated sample data for demonstration and interface validation. They cover a synthetic January 2026 sample window and must not be treated as live measurements, official government data, forecasts, navigation guidance, or operational decisions. The source cards are metadata examples and retain their `is_sample_data` designation.
 
-`.env.example` therefore contains only the optional public `VITE_API_BASE_URL=`.
+No API keys, secrets, databases, paid services, or external live-data requests are needed. Any future external integration must remain server-side and must never expose credentials to the browser.
 
----
+## Checks
 
-## 7 · Testing
+Run the frontend and Worker type checks and production build with:
 
 ```bash
-# frontend types + build
-npx tsc --noEmit && npm run build
-
-# backend smoke tests (52 assertions)
-cd backend && PYTHONPATH=. python3 tools/smoke_test.py
-
-# backend ⇄ frontend-fallback parity
-python3 backend/tools/parity_test.py
+npx tsc --noEmit
+npm run build
 ```
+
+The existing Python FastAPI service under `backend/` remains available for reference and parity testing, but the deployed Cloudflare Worker is the production API routing layer described above.
