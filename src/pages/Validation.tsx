@@ -40,6 +40,8 @@ import {
   Table2,
   TrendingUp,
   FlaskConical,
+  Download,
+  Loader2,
 } from "lucide-react";
 import type { ErrorCell, MatchRecord, ScatterPoint, StatusLevel } from "../types";
 import {
@@ -62,12 +64,15 @@ import DataTable, { Column } from "../components/DataTable";
 import EmptyState from "../components/EmptyState";
 import { CardSkeleton, ChartSkeleton, InfoTip, PageHeader, Skeleton } from "../components/ui";
 import { fmtLat, fmtLon, signed } from "../lib/utils";
+import { generateValidationReport } from "../lib/validationReport";
 import type { AppSettings } from "../App";
 
 export default function Validation({ settings }: { settings: AppSettings }) {
   const [filters, setFilters] = useState<PageFilters>(() => ({ ...DEFAULT_FILTERS, region: settings.defaultRegion }));
   const [data, setData] = useState<ValidationBundle | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   const spec = useMemo(
     () => ({ region: filters.region, variable: filters.variable, depth: filters.depth, fromDay: filters.fromDay, toDay: filters.toDay }),
@@ -122,6 +127,28 @@ export default function Validation({ settings }: { settings: AppSettings }) {
   const depthLabel = filters.depth === 0 ? "the surface (0 m)" : `${filters.depth} m`;
   const rangeLabel = `${shortDate(filters.fromDay)} – ${shortDate(filters.toDay)} 2026`;
 
+  async function handleGenerateReport() {
+    if (!data || reportLoading) return;
+    setReportLoading(true);
+    setReportError(null);
+    try {
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      generateValidationReport({
+        bundle: data,
+        regionKey: filters.region,
+        variable: filters.variable,
+        depth: filters.depth,
+        fromDay: filters.fromDay,
+        toDay: filters.toDay,
+      });
+    } catch (error) {
+      console.error("[OceanScope] validation report generation failed", error);
+      setReportError("Report could not be generated. Please try again.");
+    } finally {
+      setReportLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -129,10 +156,23 @@ export default function Validation({ settings }: { settings: AppSettings }) {
         title="Model Validation"
         subtitle="Quantify agreement between ocean-model predictions and real-world measurements."
         actions={
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11.5px] font-semibold text-amber-800">
-            <FlaskConical className="h-3.5 w-3.5" aria-hidden />
-            Curated sample data
-          </span>
+          <>
+            <button
+              type="button"
+              onClick={handleGenerateReport}
+              disabled={loading || !data || reportLoading}
+              aria-busy={reportLoading}
+              className="inline-flex items-center gap-1.5 rounded-md bg-navy-800 px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-sm transition-colors hover:bg-navy-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {reportLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Download className="h-3.5 w-3.5" aria-hidden />}
+              {reportLoading ? "Generating report…" : "Generate Validation Report"}
+            </button>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11.5px] font-semibold text-amber-800">
+              <FlaskConical className="h-3.5 w-3.5" aria-hidden />
+              Curated sample data
+            </span>
+            {reportError && <span className="basis-full text-right text-[11px] font-medium text-red-700" role="alert">{reportError}</span>}
+          </>
         }
       />
 
