@@ -93,7 +93,7 @@ function routeApi(url: URL): Response {
   if (path === "/api/health") return json({ status: "ok", service: "OceanScope 3D API", version: "1.0.0", data_mode: "curated_sample_data", message: "API operational. No live agency data sources are connected." });
   if (path === "/api/variables") return json(variableInfo.map((v) => ({ key: v.api_key, label: v.label, unit: v.unit, good_below: v.good_below, moderate_below: v.moderate_below })));
   if (path === "/api/regions") return json(regionInfo.map((r) => ({ key: r.key, label: r.label, bbox: r.bbox, blurb: r.blurb })));
-  if (path === "/api/data-sources") return json(dataSources);
+  if (path === "/api/data-sources") return json((dataSources as JsonRecord).data_sources ?? dataSources);
   if (path === "/api/stations") { const f = parseFilters(url, false); return json(stations.filter((s) => regionMatch(s, f.region))); }
   if (path === "/api/ocean-data") { const f = parseFilters(url); const date = first(url.searchParams.get("date")); if (date && !/^2026-01-(0[1-9]|[12][0-9]|30)$/.test(date)) throw new Error("Invalid date. Expected YYYY-MM-DD within January 2026."); return json(filteredGrid(f, date).map((g) => ({ latitude: g.latitude, longitude: g.longitude, depth_m: g.depth_m, timestamp: g.timestamp, variable: g.variable, value: g.value, unit: g.unit, region: g.region, direction_deg: g.direction_deg ?? null }))); }
   if (path === "/api/observations") { const f = parseFilters(url); const p = first(url.searchParams.get("platform")); const stationId = first(url.searchParams.get("station_id")); if (stationId && !stationFor(stationId)) return error(`Unknown station_id '${stationId}'.`, 404); return json(filteredObservations(f, p, stationId).map((o) => ({ ...o, station_name: stationFor(o.station_id)?.name ?? o.station_name }))); }
@@ -105,12 +105,21 @@ function routeApi(url: URL): Response {
   return error("API route not found.", 404);
 }
 
+async function serveAssetOrSpa(request: Request, env: Env): Promise<Response> {
+  const asset = await env.ASSETS.fetch(request);
+  if (asset.status !== 404 || request.method !== "GET") return asset;
+  const spaUrl = new URL(request.url);
+  spaUrl.pathname = "/";
+  spaUrl.search = "";
+  return env.ASSETS.fetch(new Request(spaUrl, request));
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === "GET" && url.pathname.startsWith("/api/")) {
       try { return routeApi(url); } catch (e) { return error(e instanceof Error ? e.message : "Invalid query parameters."); }
     }
-    return env.ASSETS.fetch(request);
+    return serveAssetOrSpa(request, env);
   },
 };
