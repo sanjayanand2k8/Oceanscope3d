@@ -11,6 +11,7 @@ import { cls, downloadCSV, fmtLat, fmtLon, signed } from "../lib/utils";
 export default function ObservationDetailPanel({
   snapshot,
   loading,
+  snapshotError,
   onClose,
   onViewComparison,
   onTogglePin,
@@ -18,6 +19,7 @@ export default function ObservationDetailPanel({
 }: {
   snapshot: StationSnapshot | null;
   loading: boolean;
+  snapshotError?: string | null;
   onClose: () => void;
   onViewComparison: () => void;
   onTogglePin: () => void;
@@ -28,6 +30,22 @@ export default function ObservationDetailPanel({
       {loading ? (
         <div className="p-5">
           <CardSkeleton lines={6} />
+        </div>
+      ) : snapshotError ? (
+        <div className="flex-1 p-4">
+          <EmptyState
+            icon={Info}
+            title="No usable record available"
+            body={snapshotError}
+            action={
+              <button
+                onClick={onClose}
+                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ocean-500"
+              >
+                Dismiss
+              </button>
+            }
+          />
         </div>
       ) : !snapshot ? (
         <div className="flex-1 p-4">
@@ -130,11 +148,13 @@ function PanelBody({
           <span
             className={cls(
               "inline-flex items-center gap-1 rounded-full border px-2 py-[3px] text-[11px] font-semibold",
-              station.qc === "passed" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"
+              (snapshot.qualityFlag ?? (station.qc === "passed" ? "pass" : "suspect")) === "pass"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-amber-200 bg-amber-50 text-amber-700"
             )}
           >
             <ShieldCheck className="h-3 w-3" aria-hidden />
-            QC {station.qc === "passed" ? "passed" : "flagged"}
+            {(snapshot.qualityFlag ?? (station.qc === "passed" ? "pass" : "suspect")) === "pass" ? "QC passed" : "QC suspect"}
           </span>
         </div>
 

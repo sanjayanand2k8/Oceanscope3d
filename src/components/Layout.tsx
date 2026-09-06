@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { cls } from "../lib/utils";
+import type { DataMode } from "../services/api";
 
 export const NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard, path: "#/" },
@@ -43,7 +44,7 @@ function Logo() {
   );
 }
 
-function NavList({ current, onNavigate, onGlossary, onSettings }: NavProps & { onNavigate?: () => void }) {
+function NavList({ current, onNavigate, onGlossary, onSettings, dataMode }: NavProps & { onNavigate?: () => void }) {
   return (
     <>
       <nav className="mt-5 flex-1 space-y-1 px-3" aria-label="Primary">
@@ -94,15 +95,27 @@ function NavList({ current, onNavigate, onGlossary, onSettings }: NavProps & { o
       </nav>
 
       <div className="mx-3 mb-4 rounded-lg border border-white/10 bg-white/[0.04] p-3">
-        <p className="flex items-center gap-2 text-[11.5px] font-semibold text-slate-200">
-          <span className="relative flex h-2 w-2" aria-hidden>
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-          </span>
-          Datasets synced (sample)
-        </p>
+        {dataMode === "api" ? (
+          <p className="flex items-center gap-2 text-[11.5px] font-semibold text-slate-200">
+            <span className="relative flex h-2 w-2" aria-hidden>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
+            Local API connected
+          </p>
+        ) : dataMode === "fallback" ? (
+          <p className="flex items-center gap-2 text-[11.5px] font-semibold text-slate-200">
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" aria-hidden />
+            Curated sample data
+          </p>
+        ) : (
+          <p className="flex items-center gap-2 text-[11.5px] font-semibold text-slate-200">
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-slate-400" aria-hidden />
+            Checking data source…
+          </p>
+        )}
         <p className="mt-1.5 text-[10.5px] leading-relaxed text-slate-400">
-          Prototype v0.9 · mock data
+          Prototype v0.9 · {dataMode === "api" ? "backend served" : "embedded fallback"}
           <br />
           Team Nautilus · SIH 2026
         </p>
@@ -115,12 +128,14 @@ interface NavProps {
   current: RouteId;
   onGlossary: () => void;
   onSettings: () => void;
+  dataMode: DataMode;
 }
 
 export default function Layout({
   current,
   onGlossary,
   onSettings,
+  dataMode,
   children,
 }: NavProps & { children: ReactNode }) {
   const [drawer, setDrawer] = useState(false);
@@ -144,7 +159,7 @@ export default function Layout({
           <Logo />
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <NavList current={current} onGlossary={onGlossary} onSettings={onSettings} />
+          <NavList current={current} onGlossary={onGlossary} onSettings={onSettings} dataMode={dataMode} />
         </div>
       </aside>
 
@@ -177,7 +192,7 @@ export default function Layout({
               </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-6">
-              <NavList current={current} onGlossary={onGlossary} onSettings={onSettings} onNavigate={() => setDrawer(false)} />
+              <NavList current={current} onGlossary={onGlossary} onSettings={onSettings} dataMode={dataMode} onNavigate={() => setDrawer(false)} />
             </div>
           </div>
         </div>

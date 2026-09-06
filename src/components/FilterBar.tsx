@@ -46,7 +46,13 @@ export default function FilterBar({
   onReset?: () => void;
   className?: string;
 }) {
-  const set = <K extends keyof PageFilters>(key: K, value: PageFilters[K]) => onChange({ ...filters, [key]: value });
+  const set = <K extends keyof PageFilters>(key: K, value: PageFilters[K]) => {
+    const next: PageFilters = { ...filters, [key]: value };
+    // keep the focus day inside the selected date range
+    next.fromDay = Math.min(next.fromDay, next.toDay);
+    next.day = Math.min(Math.max(next.day, next.fromDay), next.toDay);
+    onChange(next);
+  };
 
   return (
     <div className={cls("rounded-lg border border-slate-200 bg-white p-3.5 shadow-[0_1px_2px_rgba(15,40,80,0.05)]", className)}>
@@ -115,13 +121,17 @@ export default function FilterBar({
             </span>
             <input
               type="range"
-              min={1}
-              max={DAYS}
+              min={filters.fromDay}
+              max={Math.max(filters.toDay, filters.fromDay + 1)}
               value={filters.day}
               onChange={(e) => set("day", Number(e.target.value))}
-              className="h-[34px] w-full cursor-pointer accent-teal-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ocean-500"
-              aria-label={`Focus day within January 2026, currently ${shortDate(filters.day)}`}
+              className="h-[30px] w-full cursor-pointer accent-teal-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ocean-500"
+              aria-label={`Focus day within the selected range, currently ${shortDate(filters.day)} 2026`}
             />
+            <span className="-mt-1 flex justify-between text-[10px] tabular-nums text-slate-400" aria-hidden>
+              <span>{shortDate(filters.fromDay)}</span>
+              <span>{shortDate(filters.toDay)}</span>
+            </span>
           </div>
         )}
 

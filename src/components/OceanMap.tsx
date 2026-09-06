@@ -1,15 +1,16 @@
 /* ------------------------------------------------------------------ */
 /* OceanMap — interactive SVG map of the North Indian Ocean.           */
 /*                                                                     */
-/* Renders a stylised coastline, lat/lon graticule, a simulated model  */
-/* heat field, in-situ station markers (circle = buoy, diamond = Argo, */
-/* triangle = ship, square = moored array) and current-flow arrows.    */
-/* No external / paid map provider is used.                            */
+/* Purely presentational: the model grid, station marker values and    */
+/* current arrows arrive as props from the API client (local FastAPI   */
+/* backend or the identical embedded fallback). No external / paid map */
+/* provider is used.                                                   */
 /* ------------------------------------------------------------------ */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Crosshair, Layers, Maximize2, Minus, Plus } from "lucide-react";
 import type { Depth, SourceMode, Station, VariableKey, RegionKey } from "../types";
+import type { MapArrow, MapGridCell, MapMarkerValue } from "../services/api";
 import {
   ANDAMANS,
   ATOLLS,
@@ -19,26 +20,21 @@ import {
   SRI_LANKA,
   STATUS_META,
   SUMATRA,
-  currentDirection,
-  fieldValue,
-  isLand,
-  modelValue,
-  noise,
-  observedValue,
   paletteColor,
   regionByKey,
   stationsInRegion,
-  statusFor,
   valueColor,
   variableByKey,
   STATIONS,
 } from "../data/ocean";
 import { LegendScale } from "./ui";
-import { cls, fmtLat, fmtLon } from "../lib/utils";
+import { cls, fmtLat, fmtLon, signed } from "../lib/utils";
 
 const W = 1000;
 const H = 560;
 const PX = 20; // svg units per degree
+
+export const MAP_CELL_DEG = 1.05;
 
 function project(lon: number, lat: number): [number, number] {
   return [(lon - MAP_EXTENT.lonMin) * PX, (MAP_EXTENT.latMax - lat) * PX];
@@ -57,6 +53,10 @@ interface OceanMapProps {
   selectedId: string | null;
   onSelect: (station: Station | null) => void;
   reducedMotion?: boolean;
+  gridCells: MapGridCell[];
+  arrows: MapArrow[];
+  markerValues: Record<string, MapMarkerValue>;
+  layerLoading?: boolean;
 }
 
 export default function OceanMap({
@@ -69,6 +69,10 @@ export default function OceanMap({
   selectedId,
   onSelect,
   reducedMotion = false,
+  gridCells,
+  arrows,
+  markerValues,
+  layerLoading = false,
 }: OceanMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ k: 1, tx: 0, ty: 0 });
@@ -82,48 +86,8 @@ export default function OceanMap({
   const def = variableByKey(variable);
   const [domMin, domMax] = def.domain(depth);
   const regionObj = regionByKey(region);
-
-  /* ----- simulated model raster ----- */
-  const cells = useMemo(() => {
-    const step = 1.05;
-    const out: { x: number; y: number; color: string; key: string }[] = [];
-    for (let lon = MAP_EXTENT.lonMin; lon < MAP_EXTENT.lonMax; lon += step) {
-      for (let lat = MAP_EXTENT.latMin; lat < MAP_EXTENT.latMax; lat += step) {
-        const cLon = lon + step / 2;
-        const cLat = lat + step / 2;
-        if (isLand(cLon, cLat)) continue;
-        const v = fieldValue(variable, cLon, cLat, depth, day) + noise(`cell|${variable}|${depth}|${cLon}|${cLat}`, 0.12);
-        const [x, y] = project(lon, lat);
-        out.push({ x, y, color: valueColor(variable, v, depth), key: `${lon.toFixed(1)}|${lat.toFixed(1)}` });
-      }
-    }
-    return out;
-  }, [variable, depth, day]);
-
-  /* ----- current arrows ----- */
-  const arrows = useMemo(() => {
-    if (variable !== "current") return [];
-    const step = 2.7;
-    const out: { x: number; y: number; dir: number; color: string; scale: number; key: string }[] = [];
-    for (let lon = MAP_EXTENT.lonMin + 1; lon < MAP_EXTENT.lonMax; lon += step) {
-      for (let lat = MAP_EXTENT.latMin + 1; lat < MAP_EXTENT.latMax; lat += step) {
-        if (isLand(lon, lat)) continue;
-        const speed = fieldValue("current", lon, lat, depth, day);
-        const [x, y] = project(lon, lat);
-        out.push({
-          x,
-          y,
-          dir: currentDirection(lon, lat, day),
-          color: paletteColor(def.palette, 0.35 + (speed / 1.5) * 0.65),
-          scale: 0.55 + (speed / 1.5) * 0.8,
-          key: `${lon}|${lat}`,
-        });
-      }
-    }
-    return out;
-  }, [variable, depth, day, def.palette]);
-
   const regionStations = useMemo(() => stationsInRegion(region), [region]);
+  const cellSize = MAP_CELL_DEG * PX;
 
   /* ----- viewport transforms ----- */
   const fitToRegion = (r: RegionKey) => {
@@ -197,13 +161,14 @@ export default function OceanMap({
 
   const lonLines = [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
   const latLines = [0, 5, 10, 15, 20, 25];
-
   const fieldOpacity = source === "obs" ? 0 : source === "compare" ? 0.45 : 0.66;
+
+  const markersReady = Object.keys(markerValues).length > 0;
 
   return (
     <div
       ref={containerRef}
-      className={cls("relative h-full w-full overflow-hidden bg-navy-850 select-none", isFullscreen && "bg-navy-900")}
+      className={cls("relative h-full w-full select-none overflow-hidden bg-navy-850", isFullscreen && "bg-navy-900")}
       style={{ borderRadius: "inherit" }}
     >
       <svg
@@ -277,21 +242,24 @@ export default function OceanMap({
             <text x={project(94.35, 5.2)[0]} y={project(94.35, 5.2)[1]} fill="rgba(146,187,226,0.55)" fontSize={7.5} fontWeight={600} letterSpacing="0.06em">ANDAMAN &amp; NICOBAR ISLANDS</text>
           </g>
 
-          {/* model field raster */}
+          {/* model field raster (API data) */}
           {layers.field && fieldOpacity > 0 && (
             <g pointerEvents="none" opacity={fieldOpacity}>
-              {cells.map((c) => (
-                <rect key={c.key} x={c.x + 0.6} y={c.y + 0.6} width={PX * 1.05 - 1.4} height={PX * 1.05 - 1.4} rx={2.5} fill={c.color} />
-              ))}
+              {gridCells.map((c) => {
+                const [x, y] = project(c.lon - MAP_CELL_DEG / 2, c.lat + MAP_CELL_DEG / 2);
+                return <rect key={`${c.lon}|${c.lat}`} x={x + 0.6} y={y + 0.6} width={cellSize - 1.4} height={cellSize - 1.4} rx={2.5} fill={valueColor(variable, c.value, depth)} />;
+              })}
             </g>
           )}
 
-          {/* current flow arrows */}
+          {/* current flow arrows (API data) */}
           {layers.currents && variable === "current" && (
             <g pointerEvents="none" opacity={0.9}>
-              {arrows.map((a) => (
-                <use key={a.key} href="#current-arrow" transform={`translate(${a.x} ${a.y}) rotate(${a.dir}) scale(${a.scale})`} fill={a.color} />
-              ))}
+              {arrows.map((a) => {
+                const [x, y] = project(a.lon, a.lat);
+                const scale = 0.55 + (a.speed / 1.5) * 0.8;
+                return <use key={`${a.lon}|${a.lat}`} href="#current-arrow" transform={`translate(${x} ${y}) rotate(${a.direction}) scale(${scale})`} fill={paletteColor(def.palette, 0.35 + (a.speed / 1.5) * 0.65)} />;
+              })}
             </g>
           )}
 
@@ -300,18 +268,19 @@ export default function OceanMap({
 
           {/* station markers */}
           {layers.stations &&
+            markersReady &&
             STATIONS.map((s) => {
               const inRegion = regionStations.some((r) => r.id === s.id);
               const style = PLATFORM_STYLE[s.platform];
               const [x, y] = project(s.lon, s.lat);
-              const obs = observedValue(s, variable, s.depths.includes(depth) ? depth : s.depths[s.depths.length - 1], day);
-              const mdl = modelValue(s, variable, s.depths.includes(depth) ? depth : s.depths[s.depths.length - 1], day);
-              const status = statusFor(variable, mdl - obs);
-              const fill =
-                source === "compare"
-                  ? STATUS_META[status].color
+              const mv = markerValues[s.id];
+              const available = !!mv && mv.available && Number.isFinite(mv.observed);
+              const fill = !available
+                ? "#5B7086"
+                : source === "compare"
+                  ? STATUS_META[mv.status].color
                   : source === "obs"
-                    ? valueColor(variable, obs, depth)
+                    ? valueColor(variable, mv.observed, mv.effectiveDepth)
                     : inRegion
                       ? "#122B4A"
                       : "#173A60";
@@ -321,19 +290,19 @@ export default function OceanMap({
                 <g
                   key={s.id}
                   transform={`translate(${x} ${y}) scale(${selected ? 1.25 / Math.sqrt(view.k) : 1 / Math.sqrt(view.k)})`}
-                  opacity={dim ? 0.4 : 1}
-                  className="cursor-pointer"
+                  opacity={dim ? 0.55 : available ? 1 : 0.7}
+                  className="cursor-pointer outline-none"
                   onClick={(e) => {
                     e.stopPropagation();
                     onSelect(s);
                   }}
-                  onMouseEnter={() => !dim && setHoverStation(s)}
+                  onMouseEnter={() => setHoverStation(s)}
                   onMouseLeave={() => setHoverStation(null)}
                   role="button"
-                  aria-label={`Station ${s.id}, ${s.platform}`}
-                  tabIndex={dim ? -1 : 0}
+                  aria-label={`Station ${s.id}, ${s.platform}${dim ? " (outside the selected region)" : ""}${available ? "" : ", no usable record this day"}. Activate to view details.`}
+                  tabIndex={0}
                   onKeyDown={(e) => {
-                    if ((e.key === "Enter" || e.key === " ") && !dim) {
+                    if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       onSelect(s);
                     }
@@ -349,7 +318,7 @@ export default function OceanMap({
                       className={reducedMotion ? "" : "animate-[spin_9s_linear_infinite]"}
                     />
                   )}
-                  <circle r={9.5} fill="transparent" />
+                  <circle className="hit-ring" r={10} fill="transparent" stroke="transparent" strokeWidth={2.2} />
                   {style.marker === "circle" && <circle r={6} fill={fill} stroke="#fff" strokeWidth={1.8} />}
                   {style.marker === "diamond" && <path d="M0 -7 L7 0 L0 7 L-7 0 Z" fill={fill} stroke="#fff" strokeWidth={1.8} />}
                   {style.marker === "triangle" && <path d="M0 -7.4 L6.6 5.6 L-6.6 5.6 Z" fill={fill} stroke="#fff" strokeWidth={1.8} />}
@@ -384,7 +353,7 @@ export default function OceanMap({
         )}
       </svg>
 
-      {/* top-left context chip */}
+      {/* top-left context chips */}
       <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap items-center gap-1.5">
         <span className="rounded-md bg-navy-950/70 px-2.5 py-1.5 text-[11px] font-semibold tracking-wide text-white backdrop-blur-sm">
           {def.short} · {depth === 0 ? "Surface (0 m)" : `${depth} m`} · {dateLabel}
@@ -392,6 +361,11 @@ export default function OceanMap({
         <span className="rounded-md bg-navy-950/70 px-2.5 py-1.5 text-[11px] font-medium tracking-wide text-slate-300 backdrop-blur-sm">
           {regionObj.label}
         </span>
+        {layerLoading && (
+          <span className="rounded-md bg-navy-950/70 px-2.5 py-1.5 text-[11px] font-medium tracking-wide text-teal-300 backdrop-blur-sm">
+            Updating model layer…
+          </span>
+        )}
       </div>
 
       {/* map controls */}
@@ -439,8 +413,16 @@ export default function OceanMap({
       </div>
 
       {/* hover tooltip */}
-      {hoverStation && (
-        <StationTooltip station={hoverStation} variable={variable} depth={depth} day={day} view={view} source={source} />
+      {hoverStation && markerValues[hoverStation.id] && (
+        <StationTooltip
+          station={hoverStation}
+          variable={variable}
+          depth={depth}
+          day={day}
+          view={view}
+          source={source}
+          markerValue={markerValues[hoverStation.id]}
+        />
       )}
 
       {/* bottom overlays */}
@@ -539,6 +521,7 @@ function StationTooltip({
   day,
   view,
   source,
+  markerValue,
 }: {
   station: Station;
   variable: VariableKey;
@@ -546,15 +529,14 @@ function StationTooltip({
   day: number;
   view: { k: number; tx: number; ty: number };
   source: SourceMode;
+  markerValue: MapMarkerValue;
 }) {
   const def = variableByKey(variable);
-  const effDepth = station.depths.includes(depth) ? depth : station.depths[station.depths.length - 1];
-  const obs = observedValue(station, variable, effDepth, day);
-  const mdl = modelValue(station, variable, effDepth, day);
-  const status = statusFor(variable, mdl - obs);
+  const available = markerValue.available && Number.isFinite(markerValue.observed);
   const [px, py] = project(station.lon, station.lat);
   const left = ((px * view.k + view.tx) / W) * 100;
   const top = ((py * view.k + view.ty) / H) * 100;
+  void day;
   return (
     <div
       className="pointer-events-none absolute z-30 w-52 -translate-x-1/2 rounded-lg border border-slate-200 bg-white p-3 shadow-xl"
@@ -564,17 +546,26 @@ function StationTooltip({
       <p className="text-[12px] font-bold text-navy-900">{station.id}</p>
       <p className="text-[11px] text-slate-500">{station.platform} · {station.name}</p>
       <div className="mt-2 space-y-1 border-t border-dashed border-slate-200 pt-2 text-[11px] tabular-nums">
-        {source !== "obs" && (
-          <p className="flex justify-between"><span className="text-slate-500">Model</span><span className="font-semibold text-ocean-700">{mdl.toFixed(def.decimals)} {def.unit}</span></p>
-        )}
-        <p className="flex justify-between"><span className="text-slate-500">Observed</span><span className="font-semibold text-teal-700">{obs.toFixed(def.decimals)} {def.unit}</span></p>
-        {source === "compare" && (
-          <p className="flex justify-between">
-            <span className="text-slate-500">Difference</span>
-            <span className="font-semibold" style={{ color: STATUS_META[status].color }}>
-              {(mdl - obs >= 0 ? "+" : "−") + Math.abs(mdl - obs).toFixed(def.decimals)} {def.unit}
-            </span>
-          </p>
+        {!available ? (
+          <p className="text-[11px] text-slate-500">No usable record for this day (telemetry / QC gap). Click for nearest available record.</p>
+        ) : (
+          <>
+            {source !== "obs" && (
+              <p className="flex justify-between"><span className="text-slate-500">Model</span><span className="font-semibold text-ocean-700">{markerValue.model.toFixed(def.decimals)} {def.unit}</span></p>
+            )}
+            <p className="flex justify-between"><span className="text-slate-500">Observed</span><span className="font-semibold text-teal-700">{markerValue.observed.toFixed(def.decimals)} {def.unit}</span></p>
+            {source === "compare" && (
+              <p className="flex justify-between">
+                <span className="text-slate-500">Difference</span>
+                <span className="font-semibold" style={{ color: STATUS_META[markerValue.status].color }}>
+                  {signed(markerValue.model - markerValue.observed, def.decimals)} {def.unit}
+                </span>
+              </p>
+            )}
+            {markerValue.effectiveDepth !== depth && (
+              <p className="pt-0.5 text-[10px] italic text-slate-400">at {markerValue.effectiveDepth} m (platform limit)</p>
+            )}
+          </>
         )}
       </div>
       <p className="mt-2 text-[10.5px] text-slate-400">Click for full details</p>
