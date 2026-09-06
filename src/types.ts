@@ -67,6 +67,8 @@ export interface StationSnapshot {
   model: number;
   diff: number;
   status: StatusLevel;
+  /** Per-record observation quality flag (from the matched record). */
+  qualityFlag?: "pass" | "suspect";
   availabilityNote?: string;
 }
 
@@ -93,15 +95,26 @@ export interface ErrorBin {
 export interface ErrorCell {
   lon: number;
   lat: number;
-  error: number;
+  /** Mean |model − observed| from matched records; null where unobserved. */
+  error: number | null;
+  /** Number of matched records supporting this cell. */
+  n: number;
+  nearestStation: string;
 }
 
 export interface ValidationMetrics {
   mae: number;
   rmse: number;
   bias: number;
+  /** Centred (bias-removed) RMSE: RMSE² = bias² + SDE². */
+  sde: number;
+  /** Pearson correlation between modelled and observed values. */
+  r: number;
   coverage: number;
+  /** Matched pairs actually used. */
   n: number;
+  /** Records the observing network should have delivered for these filters. */
+  expected: number;
   unit: string;
 }
 

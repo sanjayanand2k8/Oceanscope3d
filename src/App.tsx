@@ -1,16 +1,19 @@
 /* ------------------------------------------------------------------ */
 /* OceanScope 3D — application root                                    */
 /* Hash-based routing keeps the prototype deployable anywhere with no  */
-/* server configuration. See src/services/api.ts for the data layer.   */
+/* server configuration.  Data flows through src/services/api.ts —     */
+/* local FastAPI backend when reachable, embedded curated sample data  */
+/* otherwise (labelled subtly, never silently).                        */
 /* ------------------------------------------------------------------ */
 
 import { useCallback, useEffect, useState } from "react";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Loader2, RotateCw } from "lucide-react";
 import type { RegionKey } from "./types";
 import { REGIONS } from "./data/ocean";
 import Layout, { NAV_ITEMS, type RouteId } from "./components/Layout";
 import GlossaryModal from "./components/GlossaryModal";
 import { Modal, SelectField, SegmentedControl } from "./components/ui";
+import { getDataMode, onDataModeChange, retryBackend } from "./services/api";
 import Overview from "./pages/Overview";
 import Explorer from "./pages/Explorer";
 import Validation from "./pages/Validation";
@@ -58,6 +61,11 @@ export default function App() {
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
+  const [dataMode, setDataMode] = useState(getDataMode());
+  const [epoch, setEpoch] = useState(0);
+  const [retrying, setRetrying] = useState(false);
+
+  useEffect(() => onDataModeChange(setDataMode), []);
 
   useEffect(() => {
     const onHash = () => {
@@ -66,6 +74,23 @@ export default function App() {
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  /* silently probe the backend every 45 s while the fallback is active */
+  useEffect(() => {
+    if (dataMode !== "fallback") return;
+    const timer = setInterval(async () => {
+      const ok = await retryBackend();
+      if (ok) setEpoch((e) => e + 1);
+    }, 45_000);
+    return () => clearInterval(timer);
+  }, [dataMode]);
+
+  const reconnect = useCallback(async () => {
+    setRetrying(true);
+    const ok = await retryBackend();
+    setRetrying(false);
+    if (ok) setEpoch((e) => e + 1);
   }, []);
 
   const saveSettings = useCallback((next: AppSettings) => {
@@ -113,11 +138,31 @@ export default function App() {
         Skip to main content
       </a>
 
-      <Layout current={route} onGlossary={openGlossary} onSettings={openSettings}>
-        <div id="main-content" key={route} aria-label={activeNav?.label} className="page-enter">
+      <Layout current={route} onGlossary={openGlossary} onSettings={openSettings} dataMode={dataMode}>
+        <div id="main-content" key={`${route}-${epoch}`} aria-label={activeNav?.label} className="page-enter">
           {page}
         </div>
       </Layout>
+
+      {/* subtle, non-blocking notice whenever the embedded sample fallback is active */}
+      {dataMode === "fallback" && (
+        <div
+          role="status"
+          className="fixed bottom-[76px] right-3 z-[65] flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 shadow-md shadow-amber-900/10 backdrop-blur lg:bottom-5 lg:right-5"
+        >
+          <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" aria-hidden />
+          <span className="text-[11px] font-semibold text-amber-800">Displaying curated sample data</span>
+          <button
+            onClick={reconnect}
+            disabled={retrying}
+            title="Retry the connection to the local FastAPI backend"
+            className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10.5px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-60"
+          >
+            {retrying ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : <RotateCw className="h-3 w-3" aria-hidden />}
+            Reconnect
+          </button>
+        </div>
+      )}
 
       <GlossaryModal open={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
 
@@ -145,7 +190,7 @@ export default function App() {
             </p>
             <p className="mt-1 text-[11.5px] leading-relaxed text-slate-600">
               OceanScope 3D prototype v0.9 · Smart India Hackathon 2026 · SIH26067. Units are fixed to °C, PSU and m/s until the
-              production unit service is connected.
+              production unit service is connected. Data status: {dataMode === "api" ? "local FastAPI backend" : dataMode === "fallback" ? "curated sample data" : "checking…"}.
             </p>
           </div>
         </div>

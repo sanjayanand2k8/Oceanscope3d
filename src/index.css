@@ -87,6 +87,11 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Keyboard focus indicator for SVG station markers */
+g[role="button"]:focus-visible .hit-ring {
+  stroke: #2dd4bf;
+}
+
 /* Page transition — subtle rise + fade, suppressed under reduced motion */
 @keyframes page-in {
   from {
