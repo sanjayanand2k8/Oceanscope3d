@@ -1,6 +1,20 @@
 /* Project Overview — SIH identity, stack, innovation, team, contact. */
 
-import { Award, Building2, CheckCircle2, Code2, Compass, Cpu, Database, Lightbulb, Mail, Server, Target, Wind } from "lucide-react";
+import {
+  Award,
+  CheckCircle2,
+  Code2,
+  Compass,
+  Cpu,
+  Database,
+  Lightbulb,
+  Mail,
+  Server,
+  Target,
+  User,
+  Wind,
+} from "lucide-react";
+
 import { INNOVATION_POINTS } from "../data/content";
 import { PageHeader } from "../components/ui";
 
@@ -118,60 +132,108 @@ export default function Project() {
         </ul>
       </section>
 
-      {/* Team */}
-      <section aria-label="Team members">
-        <div className="mb-4">
-          <h2 className="font-display text-[19px] font-semibold text-navy-950">Team Nautilus</h2>
-          <p className="text-[12px] text-slate-500">Placeholder profiles — replace with final team details before submission.</p>
-        </div>
-        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-          {TEAM.map((member) => (
-            <div key={member.initials} className="flex items-center gap-3.5 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,40,80,0.05)]">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800 font-display text-[15px] font-semibold text-teal-300" aria-hidden>
-                {member.initials}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-[13.5px] font-bold text-navy-950">{member.name}</p>
-                <p className="text-[11.5px] font-semibold text-ocean-700">{member.role}</p>
-                <p className="truncate text-[11px] text-slate-500">{member.focus}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Solo creator */}
+<section aria-label="Project creator">
+  <div className="mb-4">
+    <h2 className="font-display text-[19px] font-semibold text-navy-950">
+      Project Creator
+    </h2>
+    <p className="text-[12px] text-slate-500">
+      Independently designed and developed as a Smart India Hackathon 2026 prototype.
+    </p>
+  </div>
 
-      {/* Contact + disclaimer */}
-      <section aria-label="Contact and disclaimer" className="grid gap-3.5 lg:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-navy-900 p-6 text-white">
-          <h2 className="font-display text-[18px] font-semibold">Contact</h2>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-slate-300">
-            For demonstration, dataset access requests or collaboration around SIH26067:
-          </p>
-          <ul className="mt-4 space-y-2 text-[12.5px]">
-            <li className="flex items-center gap-2.5">
-              <Mail className="h-4 w-4 text-teal-300" aria-hidden />
-              <span className="text-slate-200">team.nautilus@sih2026.example.in</span>
-            </li>
-            <li className="flex items-center gap-2.5">
-              <Building2 className="h-4 w-4 text-teal-300" aria-hidden />
-              <span className="text-slate-200">Mentored under the Ministry of Earth Sciences track</span>
-            </li>
-            <li className="flex items-center gap-2.5">
-              <Code2 className="h-4 w-4 text-teal-300" aria-hidden />
-              <span className="text-slate-200">Repository handover follows SIH 2026 guidelines</span>
-            </li>
-          </ul>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-6">
-          <h2 className="font-display text-[18px] font-semibold text-navy-950">Project disclaimer</h2>
-          <p className="mt-2 text-[12.5px] leading-relaxed text-slate-600">
-            OceanScope 3D is a hackathon prototype. All data shown is synthetic sample material generated for demonstration and is
-            <span className="font-semibold text-navy-900"> not suitable for navigation, fisheries operations, or safety-critical
-            decisions</span>. Coastlines are simplified for illustration. No live feeds from INCOIS, Argo or NIOT are connected at
-            this stage; production deployment requires agency data agreements and operational quality control.
-          </p>
-        </div>
-      </section>
+  <div className="max-w-md rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,40,80,0.05)]">
+    <div className="flex items-center gap-3.5">
+      <span
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800 font-display text-[15px] font-semibold text-teal-300"
+        aria-hidden
+      >
+        SA
+      </span>
+
+      <div className="min-w-0">
+        <p className="truncate text-[13.5px] font-bold text-navy-950">
+          Sanjay Anand
+        </p>
+        <p className="text-[11.5px] font-semibold text-ocean-700">
+          Solo Creator & Full-Stack Developer
+        </p>
+        <p className="truncate text-[11px] text-slate-500">
+          Product design, frontend, backend architecture, data visualization and validation workflow
+        </p>
+      </div>
     </div>
-  );
-}
+  </div>
+</section>
+
+{/* Contact + disclaimer */}
+<section
+  aria-label="Contact and disclaimer"
+  className="grid gap-3.5 lg:grid-cols-2"
+>
+  <div className="rounded-xl border border-slate-200 bg-navy-900 p-6 text-white">
+    <h2 className="font-display text-[18px] font-semibold">Contact</h2>
+
+    <p className="mt-1.5 text-[12.5px] leading-relaxed text-slate-300">
+      For project demonstrations, collaboration, feedback, or enquiries related to
+      SIH26067 and OceanScope 3D:
+    </p>
+
+    <ul className="mt-4 space-y-2 text-[12.5px]">
+      <li className="flex items-center gap-2.5">
+        <Mail className="h-4 w-4 shrink-0 text-teal-300" aria-hidden />
+        <a
+          href="mailto:sanjayanand2k8@gmail.com"
+          className="text-slate-200 transition-colors hover:text-teal-200"
+        >
+          sanjayanand2k8@gmail.com
+        </a>
+      </li>
+
+      <li className="flex items-center gap-2.5">
+        <User className="h-4 w-4 shrink-0 text-teal-300" aria-hidden />
+        <span className="text-slate-200">
+          Sanjay Anand — Independent Project Creator
+        </span>
+      </li>
+
+      <li className="flex items-center gap-2.5">
+        <Code2 className="h-4 w-4 shrink-0 text-teal-300" aria-hidden />
+        <span className="text-slate-200">
+          OceanScope 3D — SIH26067 Prototype
+        </span>
+      </li>
+    </ul>
+  </div>
+
+  <div className="rounded-xl border border-slate-200 bg-white p-6">
+    <h2 className="font-display text-[18px] font-semibold text-navy-950">
+      Project Disclaimer
+    </h2>
+
+    <p className="mt-2 text-[12.5px] leading-relaxed text-slate-600">
+      OceanScope 3D is an independently developed Smart India Hackathon prototype
+      created by Sanjay Anand. The platform currently uses curated sample and
+      synthetic demonstration data to illustrate the proposed ocean-model and
+      in-situ observation comparison workflow.
+    </p>
+
+    <p className="mt-3 text-[12.5px] leading-relaxed text-slate-600">
+      The information displayed is
+      <span className="font-semibold text-navy-900">
+        {" "}not intended for navigation, fisheries operations, marine safety,
+        emergency response, or other safety-critical decisions
+      </span>
+      . Coastlines, observation locations, validation metrics, and visual layers
+      may be simplified for prototype demonstration purposes.
+    </p>
+
+    <p className="mt-3 text-[12.5px] leading-relaxed text-slate-600">
+      No live feeds or official integrations from INCOIS, Argo, NIOT, the Ministry
+      of Earth Sciences, or other agencies are connected at this stage. A production
+      deployment would require authorized data access, scientific validation,
+      operational quality control, and appropriate institutional approval.
+    </p>
+  </div>
+</section>
