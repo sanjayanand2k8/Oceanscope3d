@@ -10,7 +10,6 @@ import {
   Menu,
   Settings,
   ShieldCheck,
-  Users,
   Waves,
   Workflow,
   X,
@@ -25,7 +24,6 @@ export const NAV_ITEMS = [
   { id: "sources", label: "Data Sources", icon: Database, path: "#/sources" },
   { id: "analytics", label: "Analytics", icon: BarChart3, path: "#/analytics" },
   { id: "methodology", label: "Methodology", icon: Workflow, path: "#/methodology" },
-  { id: "project", label: "Project", icon: Users, path: "#/project" },
 ] as const;
 
 export type RouteId = (typeof NAV_ITEMS)[number]["id"];

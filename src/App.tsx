@@ -20,7 +20,6 @@ import Validation from "./pages/Validation";
 import DataSources from "./pages/DataSources";
 import Analytics from "./pages/Analytics";
 import Methodology from "./pages/Methodology";
-import Project from "./pages/Project";
 
 export interface AppSettings {
   defaultRegion: RegionKey;
@@ -48,7 +47,6 @@ const HASH_TO_ROUTE: Record<string, RouteId> = {
   "/sources": "sources",
   "/analytics": "analytics",
   "/methodology": "methodology",
-  "/project": "project",
 };
 
 function routeFromHash(): RouteId {
@@ -119,8 +117,6 @@ export default function App() {
         return <Analytics settings={settings} />;
       case "methodology":
         return <Methodology />;
-      case "project":
-        return <Project />;
       default:
         return <Overview />;
     }
