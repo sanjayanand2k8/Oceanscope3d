@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* OceanScope 3D design tokens                                         */
+/* Deep navy = identity / chrome · ocean blue = temperature & actions  */
+/* teal = salinity & observations · indigo = currents · RAG statuses   */
+/* ------------------------------------------------------------------ */
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+
+  --color-navy-50: #eff4fa;
+  --color-navy-100: #dde8f3;
+  --color-navy-200: #bbd0e6;
+  --color-navy-300: #8fb0d4;
+  --color-navy-400: #5f8bb9;
+  --color-navy-500: #3d6a9b;
+  --color-navy-600: #2c5484;
+  --color-navy-700: #1f3f66;
+  --color-navy-800: #16304e;
+  --color-navy-850: #122a45;
+  --color-navy-900: #0b1f38;
+  --color-navy-950: #071527;
+
+  --color-ocean-50: #eaf4fc;
+  --color-ocean-100: #d5e8f9;
+  --color-ocean-200: #abd1f1;
+  --color-ocean-300: #7db4e6;
+  --color-ocean-400: #4c92d7;
+  --color-ocean-500: #2b74c4;
+  --color-ocean-600: #0e6acf;
+  --color-ocean-700: #0c55a8;
+  --color-ocean-800: #0e467f;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #f1f5fa;
+  color: #1e293b;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+
+::selection {
+  background: #0e6acf;
+  color: #ffffff;
+}
+
+/* Refined focus ring defaults for mouse users; keyboard users get strong rings */
+:focus-visible {
+  outline: 2px solid #0e6acf;
+  outline-offset: 2px;
+}
+
+/* Thin, neutral scrollbars for data-dense areas */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c3cfdd transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #c3cfdd;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Recharts surface cleanup */
+.recharts-wrapper :focus {
+  outline: none;
+}
+.recharts-cartesian-axis-tick text {
+  font-family: var(--font-sans);
+}
+
+/* Page transition — subtle rise + fade, suppressed under reduced motion */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.page-enter {
+  animation: page-in 0.32s cubic-bezier(0.22, 0.9, 0.32, 1) both;
+}
+
+/* Respect reduced-motion preferences globally */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
