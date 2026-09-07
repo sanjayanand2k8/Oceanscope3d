@@ -142,7 +142,8 @@ export function SegmentedControl<T extends string>({
   return (
     <div>
       <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</span>
-      <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap rounded-lg border border-slate-300 bg-white p-0.5">
+      <div role="radiogroup" aria-label={label} className="inline-flex w-full flex-wrap rounded-lg border border-slate-300 bg-white p-0.5 sm:w-auto">
+
         {options.map((opt) => {
           const active = opt.value === value;
           return (
@@ -153,7 +154,7 @@ export function SegmentedControl<T extends string>({
               title={opt.title ?? opt.label}
               onClick={() => onChange(opt.value)}
               className={cls(
-                "inline-flex items-center gap-1.5 rounded-[7px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ocean-500",
+                "inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[7px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ocean-500 sm:flex-none",
                 size === "sm" ? "px-2.5 py-1 text-[12px]" : "px-3 py-1.5 text-[13px]",
                 active ? "bg-navy-800 text-white shadow-sm" : "text-slate-600 hover:text-navy-900"
               )}

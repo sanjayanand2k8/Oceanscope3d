@@ -56,13 +56,13 @@ export default function FilterBar({
 
   return (
     <div className={cls("rounded-lg border border-slate-200 bg-white p-3.5 shadow-[0_1px_2px_rgba(15,40,80,0.05)]", className)}>
-      <div className="flex flex-wrap items-end gap-x-5 gap-y-3.5">
+      <div className="flex flex-wrap items-end gap-3 sm:gap-x-5 sm:gap-y-3.5">
         <SelectField
           label="Region"
           value={filters.region}
           onChange={(v) => set("region", v)}
           options={REGIONS.map((r) => ({ value: r.key, label: r.label }))}
-          className="min-w-[178px] flex-1 sm:flex-none"
+          className="w-full min-w-0 sm:min-w-[178px] sm:flex-none"
         />
 
         {show.variable && (
@@ -112,7 +112,7 @@ export default function FilterBar({
         )}
 
         {show.scrubber && (
-          <div className="min-w-[210px] flex-1">
+          <div className="min-w-0 flex-1 basis-full sm:min-w-[210px] sm:basis-auto">
             <span className="mb-1.5 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               Timeline
               <span className="rounded bg-navy-50 px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums text-navy-800 normal-case tracking-normal">
@@ -162,7 +162,7 @@ function DateInput({ value, min, max, onChange, label }: { value: number; min: n
         const d = Number(e.target.value.slice(8, 10));
         if (!Number.isNaN(d)) onChange(Math.min(Math.max(d, min), max));
       }}
-      className="w-[138px] rounded-lg border border-slate-300 bg-white px-2.5 py-[7px] text-[12.5px] font-medium tabular-nums text-navy-900 focus:border-ocean-500 focus:outline-none focus:ring-2 focus:ring-ocean-500/30"
+      className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-[7px] text-[12.5px] font-medium tabular-nums text-navy-900 focus:border-ocean-500 focus:outline-none focus:ring-2 focus:ring-ocean-500/30 sm:w-[138px] sm:flex-none"
     />
   );
 }

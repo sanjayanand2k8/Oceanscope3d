@@ -135,7 +135,31 @@ export default function App() {
         Skip to main content
       </a>
 
-      <Layout current={route} onGlossary={openGlossary} onSettings={openSettings} dataMode={dataMode}>
+      <Layout
+        current={route}
+        onGlossary={openGlossary}
+        onSettings={openSettings}
+        dataMode={dataMode}
+        statusNotice={
+          dataMode === "fallback" && route !== "overview" ? (
+            <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 shadow-sm">
+              <span className="flex items-center gap-2 text-[11px] font-semibold text-amber-800">
+                <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" aria-hidden />
+                Displaying curated sample data
+              </span>
+              <button
+                onClick={reconnect}
+                disabled={retrying}
+                title="Retry the connection to the local FastAPI backend"
+                className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10.5px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-60"
+              >
+                {retrying ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : <RotateCw className="h-3 w-3" aria-hidden />}
+                Reconnect
+              </button>
+            </div>
+          ) : undefined
+        }
+      >
         <div id="main-content" key={`${route}-${epoch}`} aria-label={activeNav?.label} className="page-enter">
           <ErrorBoundary resetKey={`${route}-${epoch}`}>
             {page}
@@ -143,25 +167,6 @@ export default function App() {
         </div>
       </Layout>
 
-      {/* subtle, non-blocking notice whenever the embedded sample fallback is active */}
-      {dataMode === "fallback" && (
-        <div
-          role="status"
-          className="fixed bottom-[76px] right-3 z-[65] flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 shadow-md shadow-amber-900/10 backdrop-blur lg:bottom-5 lg:right-5"
-        >
-          <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" aria-hidden />
-          <span className="text-[11px] font-semibold text-amber-800">Displaying curated sample data</span>
-          <button
-            onClick={reconnect}
-            disabled={retrying}
-            title="Retry the connection to the local FastAPI backend"
-            className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10.5px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-60"
-          >
-            {retrying ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : <RotateCw className="h-3 w-3" aria-hidden />}
-            Reconnect
-          </button>
-        </div>
-      )}
 
       <GlossaryModal open={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
 
