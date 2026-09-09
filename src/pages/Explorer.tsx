@@ -16,7 +16,6 @@ import {
   Line,
   LineChart,
   ReferenceLine,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -40,6 +39,7 @@ import OceanMap from "../components/OceanMap";
 import ObservationDetailPanel from "../components/ObservationDetailPanel";
 import FilterBar, { DEFAULT_FILTERS, PageFilters } from "../components/FilterBar";
 import ChartCard from "../components/ChartCard";
+import StableResponsiveChart from "../components/StableResponsiveChart";
 import StatusBadge from "../components/StatusBadge";
 import EmptyState from "../components/EmptyState";
 import { ChartSkeleton, PageHeader } from "../components/ui";
@@ -249,7 +249,7 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
       )}
 
       {/* ------------------------- Bottom analytics ------------------------ */}
-      <div id="explorer-charts" ref={chartsRef} tabIndex={-1} className="grid scroll-mt-20 gap-4 outline-none xl:grid-cols-12">
+      <div id="explorer-charts" ref={chartsRef} tabIndex={-1} className="grid min-w-0 scroll-mt-20 gap-4 outline-none xl:grid-cols-12">
         <ChartCard
           icon={Activity}
           title="Model vs Observation Over Time"
@@ -267,7 +267,7 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
           ) : timeData.length === 0 ? (
             <EmptyState compact icon={Waves} title="No data available for current filters" body="Try a wider date range or a different depth level." />
           ) : (
-            <ResponsiveContainer width="100%" height={250}>
+            <StableResponsiveChart height={250}>
               <LineChart data={timeData} margin={{ top: 8, right: 12, bottom: 0, left: -14 }}>
                 <CartesianGrid stroke="#E8EEF5" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#E2E8F0" }} interval={Math.ceil(timeData.length / 8)} />
@@ -279,7 +279,7 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
                   <Line key={s.id} type="monotone" dataKey={`pin${i}`} name={s.id} stroke={PIN_COLORS[i % PIN_COLORS.length]} strokeWidth={1.4} strokeDasharray="5 3" dot={timeData.length <= 2 ? { r: 3, fill: PIN_COLORS[i % PIN_COLORS.length] } : false} />
                 ))}
               </LineChart>
-            </ResponsiveContainer>
+            </StableResponsiveChart>
           )}
         </ChartCard>
 
@@ -293,7 +293,7 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
           {depthRows.loading ? (
             <ChartSkeleton />
           ) : (
-            <ResponsiveContainer width="100%" height={250}>
+            <StableResponsiveChart height={250}>
               <LineChart data={depthData} layout="vertical" margin={{ top: 8, right: 16, bottom: 0, left: 4 }}>
                 <CartesianGrid stroke="#E8EEF5" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 10, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#E2E8F0" }} domain={["auto", "auto"]} tickFormatter={(v: number) => v.toFixed(1)} />
@@ -317,7 +317,7 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
                 <Line dataKey="model" name="Model" stroke="#2563EB" strokeWidth={2} dot={{ r: 3, fill: "#2563EB" }} connectNulls />
                 <Line dataKey="observed" name="Observed" stroke="#0D9488" strokeWidth={2} dot={{ r: 3, fill: "#0D9488" }} connectNulls />
               </LineChart>
-            </ResponsiveContainer>
+            </StableResponsiveChart>
           )}
         </ChartCard>
 
@@ -333,7 +333,7 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
           ) : diffData.length === 0 ? (
             <EmptyState compact icon={Waves} title="No data available for current filters" body="This region has no stations reporting at the chosen depth." />
           ) : (
-            <ResponsiveContainer width="100%" height={180}>
+            <StableResponsiveChart height={180}>
               <BarChart data={diffData} margin={{ top: 8, right: 12, bottom: 0, left: -14 }} barCategoryGap="24%">
                 <CartesianGrid stroke="#E8EEF5" vertical={false} />
                 <XAxis dataKey="id" tick={{ fontSize: 10, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#E2E8F0" }} interval={0} />
@@ -346,7 +346,7 @@ export default function Explorer({ settings }: { settings: AppSettings }) {
                   ))}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </StableResponsiveChart>
           )}
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-dashed border-slate-100 pt-2.5">
             {(["good", "moderate", "high"] as const).map((k) => (

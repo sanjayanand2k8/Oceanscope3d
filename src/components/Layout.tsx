@@ -127,6 +127,7 @@ interface NavProps {
   onGlossary: () => void;
   onSettings: () => void;
   dataMode: DataMode;
+  statusNotice?: ReactNode;
 }
 
 export default function Layout({
@@ -134,8 +135,9 @@ export default function Layout({
   onGlossary,
   onSettings,
   dataMode,
+  statusNotice,
   children,
-}: NavProps & { children: ReactNode }) {
+}: NavProps & { children: ReactNode; statusNotice?: ReactNode }) {
   const [drawer, setDrawer] = useState(false);
 
   useEffect(() => {
@@ -150,7 +152,7 @@ export default function Layout({
   }, [drawer]);
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen min-w-0 overflow-x-hidden bg-slate-100">
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] flex-col bg-navy-900 lg:flex">
         <div className="px-5 pb-2 pt-5">
@@ -197,10 +199,13 @@ export default function Layout({
       )}
 
       {/* Content */}
-      <div className="flex min-h-screen flex-col pt-14 lg:pl-[248px] lg:pt-0">
-        <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-5 pb-24 sm:px-6 lg:px-8 lg:py-7 lg:pb-10">{children}</main>
+      <div className="flex min-h-screen min-w-0 flex-col pt-14 lg:pl-[248px] lg:pt-0">
+        <main className="mx-auto min-w-0 w-full max-w-[1440px] flex-1 px-4 py-5 pb-24 sm:px-6 lg:px-8 lg:py-7 lg:pb-10">
+          {statusNotice}
+          {children}
+        </main>
 
-        <footer className="border-t border-slate-200 bg-white/60 py-4 pb-24 lg:pb-4">
+        <footer className="min-w-0 border-t border-slate-200 bg-white/60 py-4 pb-24 lg:pb-4">
           <p className="px-6 text-center text-[11.5px] font-medium tracking-wide text-slate-500">
             Smart India Hackathon 2026 <span className="text-slate-300">|</span> Ministry of Earth Sciences{" "}
             <span className="text-slate-300">|</span> Problem Statement SIH26067
@@ -211,7 +216,7 @@ export default function Layout({
       {/* Mobile bottom nav */}
       <nav
         aria-label="Quick navigation"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid min-w-0 grid-cols-5 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
         {[
           NAV_ITEMS[0],
@@ -227,7 +232,7 @@ export default function Layout({
               href={item.path}
               aria-current={active ? "page" : undefined}
               className={cls(
-                "flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold",
+                "flex min-w-0 flex-col items-center gap-1 py-2.5 text-center text-[10px] font-semibold",
                 active ? "text-ocean-700" : "text-slate-500"
               )}
             >
@@ -238,7 +243,7 @@ export default function Layout({
         })}
         <button
           onClick={() => setDrawer(true)}
-          className="flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold text-slate-500"
+          className="flex min-w-0 flex-col items-center gap-1 py-2.5 text-center text-[10px] font-semibold text-slate-500"
           aria-label="Open full menu"
         >
           <Menu className="h-[19px] w-[19px]" strokeWidth={1.8} aria-hidden />
