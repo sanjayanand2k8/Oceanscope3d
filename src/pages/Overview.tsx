@@ -1,6 +1,8 @@
 /* Landing / Overview page */
 
+import { useEffect, useState } from "react";
 import {
+  ArrowDown,
   ArrowRight,
   BarChart3,
   CloudRainWind,
@@ -11,6 +13,8 @@ import {
   Layers,
   LifeBuoy,
   LineChart,
+  Pause,
+  Play,
   ShieldCheck,
   Siren,
   type LucideIcon,
@@ -60,47 +64,10 @@ const WORKFLOW = [
 export default function Overview() {
   return (
     <div className="space-y-6 lg:space-y-8">
-      {/* ------------------------------- Hero ------------------------------- */}
-      <section aria-label="Introduction" className="relative isolate overflow-hidden rounded-xl bg-navy-900 text-white shadow-lg shadow-navy-900/20">
-        <HeroArt />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-navy-900/55 via-navy-900/25 to-navy-900/60 sm:hidden" aria-hidden />
-        <div className="relative z-10 max-w-2xl px-5 py-8 sm:px-10 sm:py-14 lg:px-14 lg:py-[70px]">
-          <p className="mb-3 inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase leading-relaxed tracking-[0.1em] text-teal-300 sm:text-[11px] sm:tracking-[0.14em]">
-            <span className="h-1.5 w-1.5 rounded-full bg-teal-400" aria-hidden />
-            SIH26067 · Ministry of Earth Sciences
-          </p>
-          <h1 className="font-display text-[clamp(2.15rem,10vw,3.25rem)] font-semibold leading-[1.02] tracking-tight sm:text-[52px]">
-            OceanScope <span className="text-teal-300">3D</span>
-          </h1>
-          <p className="mt-2 text-[14px] font-medium leading-relaxed text-slate-300 sm:text-[15px]">
-            Visualizing, validating, and understanding India's ocean data.
-          </p>
-          <p className="mt-5 max-w-xl text-[13px] leading-[1.75] text-slate-300/95 sm:text-[14px] sm:leading-relaxed">
-            Interactive visualization and validation of numerical ocean model outputs using in-situ observations. OceanScope 3D
-            combines model predictions with measurements from buoys, Argo floats, ships and moored instruments to make ocean
-            conditions easier to explore, compare and trust.
-          </p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <a
-              href="#/explorer"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-500 px-4 py-3 text-[14px] font-semibold text-navy-950 sm:w-auto sm:px-5 transition-colors hover:bg-teal-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900"
-            >
-              <Compass className="h-4 w-4" strokeWidth={2.2} aria-hidden />
-              Explore Ocean Data
-            </a>
-            <a
-              href="#/methodology"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/25 bg-white/5 px-4 py-3 text-[14px] font-semibold text-white sm:w-auto sm:px-5 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900"
-            >
-              View Methodology
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </a>
-          </div>
-        </div>
-      </section>
+      <LivingOceanHero />
 
       {/* --------------------------- Impact metrics ------------------------- */}
-      <section aria-label="Platform impact" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section id="overview-content" aria-label="Platform impact" className="scroll-mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {IMPACT_METRICS.map((m) => (
           <div key={m.label} className="rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,40,80,0.05)]">
             <p className="font-display text-[26px] font-semibold tabular-nums text-navy-950 sm:text-[30px]">{m.value}</p>
@@ -200,9 +167,128 @@ export default function Overview() {
   );
 }
 
-/* Hand-crafted decorative hero artwork: contour rings, flow lines and
-   station markers over the Indian Ocean — no stock photography used. */
-function HeroArt() {
+function LivingOceanHero() {
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncPreference = () => setPrefersReducedMotion(media.matches);
+    syncPreference();
+    media.addEventListener?.("change", syncPreference);
+    return () => media.removeEventListener?.("change", syncPreference);
+  }, []);
+
+  useEffect(() => {
+    const pauseWhenHidden = () => {
+      if (document.hidden) setIsPlaying(false);
+    };
+    document.addEventListener("visibilitychange", pauseWhenHidden);
+    return () => document.removeEventListener("visibilitychange", pauseWhenHidden);
+  }, []);
+
+  const motionActive = isPlaying && !prefersReducedMotion;
+
+  return (
+    <section
+      aria-label="Living Ocean introduction"
+      className="relative isolate flex min-h-[calc(100svh-3.5rem)] overflow-hidden rounded-[1.5rem] bg-[#041827] text-[#F4F9FC] shadow-[0_24px_80px_rgba(4,24,39,0.28)] lg:min-h-[calc(100vh-3.5rem)] lg:rounded-[2rem]"
+    >
+      <style>{`
+        @keyframes living-ocean-stream {
+          from { stroke-dashoffset: 0; }
+          to { stroke-dashoffset: -140; }
+        }
+        @keyframes living-ocean-node {
+          0%, 100% { opacity: .25; transform: scale(.78); }
+          50% { opacity: .9; transform: scale(1.18); }
+        }
+        .living-ocean-stream { animation: living-ocean-stream 28s linear infinite; }
+        .living-ocean-node { transform-box: fill-box; transform-origin: center; animation: living-ocean-node 3.8s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .living-ocean-stream, .living-ocean-node { animation: none !important; }
+        }
+      `}</style>
+      <HeroArt motion={motionActive} />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(22,119,200,0.2),transparent_34%),linear-gradient(90deg,rgba(4,24,39,0.98)_0%,rgba(4,24,39,0.88)_42%,rgba(4,24,39,0.5)_78%,rgba(4,24,39,0.72)_100%)]" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#041827]/45 via-transparent to-[#041827]/80" aria-hidden />
+
+      <div className="relative z-10 flex w-full flex-col justify-between gap-12 px-6 py-10 sm:px-10 sm:py-14 lg:px-16 lg:py-16 xl:px-20 xl:py-20">
+        <div className="max-w-3xl">
+          <div className="flex flex-wrap items-center gap-2.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#79DCE8] sm:text-[11px]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#79DCE8]/30 bg-[#062B4F]/70 px-3 py-1.5 backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#79DCE8] shadow-[0_0_14px_#79DCE8]" aria-hidden />
+              Indian Ocean Intelligence
+            </span>
+            <span className="text-[#F4F9FC]/55">Ocean observation console</span>
+          </div>
+
+          <h1 className="mt-8 max-w-3xl font-display text-[clamp(3.25rem,11vw,8.5rem)] font-semibold leading-[0.88] tracking-[-0.055em] text-[#F4F9FC]">
+            OceanScope <span className="text-[#79DCE8]">3D</span>
+          </h1>
+
+          <div className="mt-8 max-w-2xl border-l border-[#79DCE8]/55 pl-4 sm:pl-5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#79DCE8]">Temperature</p>
+            <p className="mt-3 max-w-xl text-[16px] leading-[1.7] text-[#F4F9FC]/82 sm:text-[18px]">
+              Explore how numerical ocean-model temperature estimates compare with curated in-situ observations across location, depth, and time.
+            </p>
+          </div>
+
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <a
+              href="#/explorer"
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#79DCE8] px-6 py-3 text-[14px] font-bold text-[#041827] shadow-[0_12px_30px_rgba(121,220,232,0.2)] transition-transform hover:-translate-y-0.5 hover:bg-[#F4F9FC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#79DCE8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#041827] sm:w-auto"
+            >
+              Explore Ocean Data
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </a>
+            <a
+              href="#/validation"
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-[#F4F9FC]/30 bg-[#062B4F]/55 px-6 py-3 text-[14px] font-semibold text-[#F4F9FC] backdrop-blur-sm transition-colors hover:border-[#79DCE8]/70 hover:bg-[#1677C8]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#79DCE8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#041827] sm:w-auto"
+            >
+              View Validation Metrics
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </a>
+          </div>
+
+          <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F4F9FC]/65">
+            SIH26067 · Ministry of Earth Sciences · Curated Sample Data
+          </p>
+          <p className="mt-2 max-w-xl text-[12px] leading-relaxed text-[#F4F9FC]/55">
+            Prototype for interactive model–observation comparison in Indian waters.
+          </p>
+        </div>
+
+        <div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
+          <a
+            href="#overview-content"
+            className="group inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#F4F9FC]/65 transition-colors hover:text-[#79DCE8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#79DCE8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#041827]"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#F4F9FC]/25 transition-colors group-hover:border-[#79DCE8]/70">
+              <ArrowDown className="h-4 w-4" aria-hidden />
+            </span>
+            Discover the platform
+          </a>
+          <button
+            type="button"
+            onClick={() => setIsPlaying((playing) => !playing)}
+            disabled={prefersReducedMotion}
+            aria-pressed={motionActive}
+            title={prefersReducedMotion ? "Motion disabled by your reduced-motion preference" : undefined}
+            className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[#F4F9FC]/20 bg-[#062B4F]/55 px-3.5 py-2 text-[11px] font-semibold text-[#F4F9FC]/70 backdrop-blur-sm transition-colors hover:border-[#79DCE8]/60 hover:text-[#F4F9FC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#79DCE8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#041827] disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            {motionActive ? <Pause className="h-3.5 w-3.5" aria-hidden /> : <Play className="h-3.5 w-3.5" aria-hidden />}
+            {prefersReducedMotion ? "Motion disabled" : motionActive ? "Pause motion" : "Play motion"}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* Hand-crafted decorative hero artwork: bathymetric contours, grid lines,
+   current streamlines and observation nodes — no external assets used. */
+function HeroArt({ motion }: { motion: boolean }) {
   return (
     <svg
       className="pointer-events-none absolute inset-0 h-full w-full"
@@ -253,7 +339,7 @@ function HeroArt() {
       </g>
 
       {/* current flow lines */}
-      <g fill="none" strokeWidth="1.6" strokeLinecap="round">
+      <g className={motion ? "living-ocean-stream" : undefined} style={{ animationPlayState: motion ? "running" : "paused" }} fill="none" strokeWidth="1.6" strokeLinecap="round">
         <path d="M-20 320 C 180 260, 340 380, 520 330 S 820 250, 1030 300" stroke="rgba(94,234,212,0.35)" strokeDasharray="1 0" />
         <path d="M-20 350 C 200 300, 380 400, 560 352 S 840 300, 1030 335" stroke="rgba(94,234,212,0.22)" />
         <path d="M-20 160 C 160 120, 320 200, 480 170 S 760 110, 1030 150" stroke="rgba(125,211,252,0.28)" />
@@ -279,10 +365,14 @@ function HeroArt() {
           { x: 260, y: 348, shape: "diamond" },
         ].map((s, i) => (
           <g key={i} transform={`translate(${s.x} ${s.y})`}>
-            <circle r="12" fill="none" stroke="rgba(94,234,212,0.35)" strokeWidth="1.4">
-              <animate attributeName="r" from="7" to="16" dur="2.6s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
-              <animate attributeName="stroke-opacity" from="0.55" to="0" dur="2.6s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
-            </circle>
+            <circle
+              className={motion ? "living-ocean-node" : undefined}
+              style={{ animationDelay: `${i * 0.4}s`, animationPlayState: motion ? "running" : "paused" }}
+              r="12"
+              fill="none"
+              stroke="rgba(121,220,232,0.5)"
+              strokeWidth="1.4"
+            />
             {s.shape === "circle" && <circle r="4.5" fill="#2DD4BF" stroke="#0A2540" strokeWidth="1.6" />}
             {s.shape === "diamond" && <path d="M0 -5 L5 0 L0 5 L-5 0 Z" fill="#5EEAD4" stroke="#0A2540" strokeWidth="1.6" />}
             {s.shape === "triangle" && <path d="M0 -5 L4.8 4 L-4.8 4 Z" fill="#38BDF8" stroke="#0A2540" strokeWidth="1.6" />}
